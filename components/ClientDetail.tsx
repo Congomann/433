@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Client, Policy, Interaction, PolicyStatus, InteractionType, Agent, User, UserRole, ClientStatus } from '../types';
 import { summarizeNotes } from '../services/geminiService';
-import { AiSparklesIcon, PlusIcon, PencilIcon, EllipsisVerticalIcon, CalendarIcon, DollarSignIcon, ShieldIcon } from './icons';
+import { AiSparklesIcon, PlusIcon, PencilIcon, EllipsisVerticalIcon, CalendarIcon, DollarSignIcon, ShieldIcon, DocumentTextIcon } from './icons';
 
 interface ClientDetailProps {
   client: Client;
@@ -17,6 +17,7 @@ interface ClientDetailProps {
   onSaveInteraction: (interaction: Omit<Interaction, 'id'>) => void;
   onOpenAddReminderModal: () => void;
   onOpenEditClientModal: (client: Client) => void;
+  onOpenUnderwritingReviewModal: (policy: Policy) => void;
 }
 
 const formatCurrency = (amount: number) => {
@@ -161,8 +162,9 @@ const AddNoteForm: React.FC<{
 };
 
 
-const PolicyCard: React.FC<{ policy: Policy; onEdit: (policy: Policy) => void; onUpdatePolicy: (policyId: number, updates: Partial<Policy>) => void; }> = ({ policy, onEdit, onUpdatePolicy }) => {
+const PolicyCard: React.FC<{ policy: Policy; onEdit: (policy: Policy) => void; onUpdatePolicy: (policyId: number, updates: Partial<Policy>) => void; currentUser: User; onReview: (policy: Policy) => void; }> = ({ policy, onEdit, onUpdatePolicy, currentUser, onReview }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const isUnderwriter = currentUser.role === UserRole.UNDERWRITING;
 
     const handleStatusChange = (status: PolicyStatus) => {
         if (window.confirm(`Are you sure you want to mark this policy as ${status}?`)) {
@@ -224,12 +226,23 @@ const PolicyCard: React.FC<{ policy: Policy; onEdit: (policy: Policy) => void; o
                 </div>
             </div>
             <p className="text-sm text-slate-500 mt-2 border-t border-slate-200/50 pt-2">Effective: {policy.startDate} - {policy.endDate}</p>
+            {isUnderwriter && (
+                <div className="mt-3 pt-3 border-t border-slate-200/50">
+                    <button 
+                        onClick={() => onReview(policy)}
+                        className="w-full flex items-center justify-center bg-indigo-100 text-indigo-700 font-semibold px-3 py-2 text-sm rounded-lg hover:bg-indigo-200 transition-colors"
+                    >
+                        <DocumentTextIcon className="w-5 h-5 mr-2" />
+                        Underwriting Review
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
 
 
-const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interactions, assignedAgent, onBack, currentUser, onUpdateStatus, onOpenAddPolicyModal, onOpenEditPolicyModal, onUpdatePolicy, onSaveInteraction, onOpenAddReminderModal, onOpenEditClientModal }) => {
+const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interactions, assignedAgent, onBack, currentUser, onUpdateStatus, onOpenAddPolicyModal, onOpenEditPolicyModal, onUpdatePolicy, onSaveInteraction, onOpenAddReminderModal, onOpenEditClientModal, onOpenUnderwritingReviewModal }) => {
   const [activeTab, setActiveTab] = useState<'policies' | 'interactions' | 'notes'>('policies');
   const [summary, setSummary] = useState('');
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -409,7 +422,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interacti
       <div>
         {activeTab === 'policies' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {policies.map(policy => <PolicyCard key={policy.id} policy={policy} onEdit={onOpenEditPolicyModal} onUpdatePolicy={onUpdatePolicy} />)}
+            {policies.map(policy => <PolicyCard key={policy.id} policy={policy} onEdit={onOpenEditPolicyModal} onUpdatePolicy={onUpdatePolicy} currentUser={currentUser} onReview={onOpenUnderwritingReviewModal} />)}
             <button onClick={onOpenAddPolicyModal} className="border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-4 text-slate-500 hover:bg-slate-100/50 hover:border-primary-500 hover:text-primary-600 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
                 <PlusIcon className="w-8 h-8 mb-2" />
                 <span className="font-semibold">Add New Policy</span>

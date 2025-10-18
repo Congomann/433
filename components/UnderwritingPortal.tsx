@@ -7,6 +7,7 @@ interface UnderwritingPortalProps {
   clients: Client[];
   agents: Agent[];
   onNavigate: (path: string) => void;
+  onReviewPolicy: (policy: Policy) => void;
 }
 
 const formatCurrency = (amount: number) => {
@@ -18,7 +19,22 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-const UnderwritingPortal: React.FC<UnderwritingPortalProps> = ({ policies, clients, agents, onNavigate }) => {
+const StatusBadge: React.FC<{ status: PolicyUnderwritingStatus }> = ({ status }) => {
+  const styles = {
+    [PolicyUnderwritingStatus.PENDING]: 'bg-amber-100 text-amber-800 ring-amber-200',
+    [PolicyUnderwritingStatus.APPROVED]: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
+    [PolicyUnderwritingStatus.REJECTED]: 'bg-rose-100 text-rose-800 ring-rose-200',
+    [PolicyUnderwritingStatus.MORE_INFO_REQUIRED]: 'bg-sky-100 text-sky-800 ring-sky-200',
+  };
+  return (
+    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ring-1 ring-inset ${styles[status]}`}>
+      {status}
+    </span>
+  );
+};
+
+
+const UnderwritingPortal: React.FC<UnderwritingPortalProps> = ({ policies, clients, agents, onNavigate, onReviewPolicy }) => {
   const pendingPolicies = policies.filter(p => p.underwritingStatus === PolicyUnderwritingStatus.PENDING);
 
   const clientMap = clients.reduce((map, client) => {
@@ -48,6 +64,8 @@ const UnderwritingPortal: React.FC<UnderwritingPortalProps> = ({ policies, clien
               <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Client & Policy Type</th>
               <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Annual Premium</th>
               <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Agent</th>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Notes</th>
               <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Submitted Date</th>
               <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
             </tr>
@@ -57,24 +75,30 @@ const UnderwritingPortal: React.FC<UnderwritingPortalProps> = ({ policies, clien
               const client = clientMap[policy.clientId];
               const agent = client?.agentId ? agentMap[client.agentId] : null;
               return (
-                <tr key={policy.id} className="border-b border-slate-200/50 last:border-b-0 hover:bg-slate-100/50 row-enter">
+                <tr key={policy.id} onClick={() => onReviewPolicy(policy)} className="border-b border-slate-200/50 last:border-b-0 hover:bg-slate-100/50 row-enter cursor-pointer">
                   <td className="px-6 py-5 whitespace-nowrap">
                     <div className="text-sm font-bold text-slate-900">{client ? `${client.firstName} ${client.lastName}` : 'N/A'}</div>
                     <div className="text-sm text-slate-500">{policy.type}</div>
                   </td>
                   <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-600">{formatCurrency(policy.annualPremium)}</td>
                   <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-600">{agent?.name || 'Unassigned'}</td>
+                   <td className="px-6 py-5 whitespace-nowrap">
+                    <StatusBadge status={policy.underwritingStatus || PolicyUnderwritingStatus.PENDING} />
+                  </td>
+                  <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500 max-w-xs truncate">
+                    {policy.underwritingNotes || <span className="italic">No notes</span>}
+                  </td>
                   <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500">{policy.startDate}</td>
                   <td className="px-6 py-5 whitespace-nowrap">
-                    <button onClick={() => onNavigate(`client/${policy.clientId}`)} className="text-sm font-semibold text-primary-600 hover:underline">
-                      Review Case
+                    <button onClick={(e) => { e.stopPropagation(); onReviewPolicy(policy); }} className="text-sm font-semibold text-primary-600 hover:underline">
+                      Review
                     </button>
                   </td>
                 </tr>
               );
             }) : (
               <tr>
-                <td colSpan={5} className="text-center p-12 text-slate-500">
+                <td colSpan={7} className="text-center p-12 text-slate-500">
                   <p className="font-semibold">The underwriting queue is clear!</p>
                   <p className="text-sm mt-1">No new policies are currently pending review.</p>
                 </td>
