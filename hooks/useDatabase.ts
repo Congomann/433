@@ -69,8 +69,8 @@ export const useDatabase = (currentUser: User | null) => {
         onRegister: (userData: Omit<User, 'id' | 'title' | 'avatar'>) => handleApiCall(
             () => apiClient.register(userData), 'Registration Submitted', 'Your application is pending approval.'
         ),
-        onUpdateAgentProfile: (agentData: Agent) => handleApiCall(
-            () => apiClient.put(`/api/agents/${agentData.id}`, agentData),
+        onUpdateAgentProfile: (agentData: Agent, role?: UserRole) => handleApiCall(
+            () => apiClient.put(`/api/agents/${agentData.id}`, { ...agentData, role }),
             'Profile Updated', 'Agent profile has been saved.'
         ),
         onMarkNotificationRead: (id: number) => handleApiCall(

@@ -122,12 +122,29 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
             return await db.createRecord(resource, body);
         }
         if (method === 'PUT' && id) {
-            if (resource === 'agents') {
+             if (resource === 'agents') {
                 if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
                     throw { status: 403, message: 'Only Admins and Managers can edit agent profiles.' };
                 }
+                const { role, ...agentData } = body;
+                const updatedAgent = await db.updateRecord('agents', id, agentData);
+                
+                if (role && currentUser.role === UserRole.ADMIN) { // only admin can change role
+                    const userToUpdate = await db.users.findById(id);
+                    if (userToUpdate && userToUpdate.role !== role) {
+                        let title = 'Insurance Agent';
+                        switch(role) {
+                            case UserRole.SUB_ADMIN: title = 'Lead Manager'; break;
+                            case UserRole.MANAGER: title = 'Regional Manager'; break;
+                            case UserRole.UNDERWRITING: title = 'Underwriting Specialist'; break;
+                            case UserRole.AGENT: default: title = 'Insurance Agent'; break;
+                        }
+                        await db.users.update(id, { role, title });
+                    }
+                }
+                return updatedAgent;
             }
-             if (resource === 'policies') {
+            if (resource === 'policies') {
                 const originalPolicy = await db.getRecordById<Policy>(resource, id);
                 if (!originalPolicy) throw { status: 404, message: "Policy not found" };
 

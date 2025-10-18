@@ -13,10 +13,27 @@ export const approveAgent = async (agentId: number, { role }: { role: UserRole }
         status: AgentStatus.ACTIVE, 
         joinDate: new Date().toISOString().split('T')[0] 
     });
+    
+    let title = 'Insurance Agent';
+    switch(role) {
+        case UserRole.SUB_ADMIN:
+            title = 'Lead Manager';
+            break;
+        case UserRole.MANAGER:
+            title = 'Regional Manager';
+            break;
+        case UserRole.UNDERWRITING:
+            title = 'Underwriting Specialist';
+            break;
+        case UserRole.AGENT:
+        default:
+            title = 'Insurance Agent';
+            break;
+    }
 
     const updatedUser = await db.users.update(agentId, { 
         role: role, 
-        title: role === UserRole.SUB_ADMIN ? 'Lead Manager' : 'Insurance Agent'
+        title: title
     });
     
     // Create a notification for the agent

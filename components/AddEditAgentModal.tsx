@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Agent, AgentStatus } from '../types';
+import { Agent, AgentStatus, UserRole, User } from '../types';
 import { CloseIcon, PlusIcon } from './icons';
 
 interface AddEditAgentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (agentData: Agent) => void;
+  onSave: (agentData: Agent, role?: UserRole) => void;
   agentToEdit: Agent | null;
+  currentUser: User;
+  roleOfAgentToEdit: UserRole | null;
 }
 
 const DEFAULT_NEW_AGENT_FORM_DATA: Omit<Agent, 'id' | 'slug' | 'leads' | 'clientCount' | 'conversionRate' | 'socials'> = {
@@ -37,14 +39,16 @@ const TextAreaField: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement> 
     </div>
 );
 
-const AddEditAgentModal: React.FC<AddEditAgentModalProps> = ({ isOpen, onClose, onSave, agentToEdit }) => {
-  const [formData, setFormData] = useState(agentToEdit || DEFAULT_NEW_AGENT_FORM_DATA);
+const AddEditAgentModal: React.FC<AddEditAgentModalProps> = ({ isOpen, onClose, onSave, agentToEdit, currentUser, roleOfAgentToEdit }) => {
+  const [formData, setFormData] = useState<Partial<Agent>>(agentToEdit || DEFAULT_NEW_AGENT_FORM_DATA);
+  const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.AGENT);
 
   useEffect(() => {
     if (isOpen) {
       setFormData(agentToEdit || DEFAULT_NEW_AGENT_FORM_DATA);
+      setSelectedRole(roleOfAgentToEdit || UserRole.AGENT);
     }
-  }, [agentToEdit, isOpen]);
+  }, [agentToEdit, roleOfAgentToEdit, isOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -72,16 +76,12 @@ const AddEditAgentModal: React.FC<AddEditAgentModalProps> = ({ isOpen, onClose, 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalAgentData: Agent = {
-      ...DEFAULT_NEW_AGENT_FORM_DATA, // Ensure all fields are present
-      ...formData,
-      id: agentToEdit?.id || 0, // ID 0 indicates a new agent
-      slug: agentToEdit?.slug || '', // Slug will be generated in parent
-      leads: agentToEdit?.leads || 0,
-      clientCount: agentToEdit?.clientCount || 0,
-      conversionRate: agentToEdit?.conversionRate || 0,
-      socials: agentToEdit?.socials || {},
+      ...DEFAULT_NEW_AGENT_FORM_DATA,
+      ...(formData as Agent),
+      id: agentToEdit?.id || 0,
     };
-    onSave(finalAgentData);
+    const roleToSave = agentToEdit && currentUser.role === UserRole.ADMIN ? selectedRole : roleOfAgentToEdit;
+    onSave(finalAgentData, roleToSave || undefined);
   };
 
   if (!isOpen) return null;
@@ -97,15 +97,34 @@ const AddEditAgentModal: React.FC<AddEditAgentModalProps> = ({ isOpen, onClose, 
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputField label="Full Name" name="name" value={formData.name} onChange={handleChange} required />
-            <InputField label="Email" name="email" type="email" value={formData.email} onChange={handleChange} required />
-            <InputField label="Phone" name="phone" type="tel" value={formData.phone} onChange={handleChange} />
-            <InputField label="Location (City, ST)" name="location" value={formData.location} onChange={handleChange} />
-            <InputField label="Commission Rate (%)" name="commissionRate" type="number" value={formData.commissionRate * 100} onChange={handleChange} min="0" max="100" />
-            <InputField label="Languages (comma-separated)" name="languages" value={formData.languages.join(', ')} onChange={handleChange} />
+            <InputField label="Full Name" name="name" value={formData.name || ''} onChange={handleChange} required />
+            <InputField label="Email" name="email" type="email" value={formData.email || ''} onChange={handleChange} required />
+            <InputField label="Phone" name="phone" type="tel" value={formData.phone || ''} onChange={handleChange} />
+            <InputField label="Location (City, ST)" name="location" value={formData.location || ''} onChange={handleChange} />
+            <InputField label="Commission Rate (%)" name="commissionRate" type="number" value={(formData.commissionRate || 0) * 100} onChange={handleChange} min="0" max="100" />
+            <InputField label="Languages (comma-separated)" name="languages" value={(formData.languages || []).join(', ')} onChange={handleChange} />
           </div>
-          <TextAreaField label="Bio" name="bio" value={formData.bio} onChange={handleChange} rows={4} />
-          <InputField label="Calendar Link" name="calendarLink" type="url" value={formData.calendarLink} onChange={handleChange} />
+
+          {agentToEdit && currentUser.role === UserRole.ADMIN && (
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-1.5">User Role</label>
+              <select
+                id="role"
+                name="role"
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value as UserRole)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+              >
+                <option value={UserRole.AGENT}>Agent</option>
+                <option value={UserRole.SUB_ADMIN}>Sub-Admin</option>
+                <option value={UserRole.MANAGER}>Manager</option>
+                <option value={UserRole.UNDERWRITING}>Underwriting</option>
+              </select>
+            </div>
+          )}
+
+          <TextAreaField label="Bio" name="bio" value={formData.bio || ''} onChange={handleChange} rows={4} />
+          <InputField label="Calendar Link" name="calendarLink" type="url" value={formData.calendarLink || ''} onChange={handleChange} />
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
               {agentToEdit ? 'Update Profile Picture' : 'Upload Profile Picture'}

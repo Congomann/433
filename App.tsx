@@ -158,6 +158,7 @@ const App: React.FC = () => {
     const [policyClientId, setPolicyClientId] = useState<number | null>(null);
     const [isAddEditAgentModalOpen, setIsAddEditAgentModalOpen] = useState(false);
     const [agentToEdit, setAgentToEdit] = useState<Agent | null>(null);
+    const [roleOfAgentToEdit, setRoleOfAgentToEdit] = useState<UserRole | null>(null);
     const [isEditMyProfileModalOpen, setIsEditMyProfileModalOpen] = useState(false);
     const [isAddEditLeadModalOpen, setIsAddEditLeadModalOpen] = useState(false);
     const [leadToEdit, setLeadToEdit] = useState<Client | null>(null);
@@ -299,7 +300,7 @@ const App: React.FC = () => {
         handleOpenNoteModal(tomorrow);
     }, [handleOpenNoteModal]);
 
-    const handleSaveAgent = useCallback(async (agentData: Agent) => {
+    const handleSaveAgent = useCallback(async (agentData: Agent, newRole?: UserRole) => {
         const isNew = !agentData.id;
         try {
             if (isNew) {
@@ -310,7 +311,7 @@ const App: React.FC = () => {
                     role: UserRole.AGENT 
                 });
             } else {
-                await displayData.handlers.onUpdateAgentProfile(agentData);
+                await displayData.handlers.onUpdateAgentProfile(agentData, newRole);
             }
             addToast(
                 isNew ? 'Agent Added' : 'Agent Updated', 
@@ -429,7 +430,7 @@ const App: React.FC = () => {
                 case 'clients': return <ClientList title={agentForClients ? `${agentForClients.name}'s Clients` : 'All Clients'} clients={clientsForList} onAddClient={() => setIsAddClientModalOpen(true)} onSelectClient={(id) => handleNavigate(`client/${id}`)} agentFilter={agentForClients} onClearFilter={() => handleNavigate('clients')} />;
                 case 'client': return clientForDetail ? <ClientDetail client={clientForDetail} policies={displayData.policies.filter(p => p.clientId === clientForDetail.id)} interactions={displayData.interactions.filter(i => i.clientId === clientForDetail.id)} assignedAgent={displayData.agents.find(a => a.id === clientForDetail.agentId)} onBack={() => handleNavigate('clients')} currentUser={displayUser!} onUpdateStatus={displayData.handlers.handleUpdateClientStatus} onOpenAddPolicyModal={() => handleOpenAddPolicyModal(clientForDetail.id)} onOpenEditPolicyModal={handleOpenEditPolicyModal} onUpdatePolicy={displayData.handlers.handleUpdatePolicy} onSaveInteraction={displayData.handlers.handleSaveInteraction} onOpenAddReminderModal={handleOpenAddReminderModal} onOpenEditClientModal={handleOpenEditClientModal} onOpenUnderwritingReviewModal={handleOpenReviewModal} /> : <div className="p-8 text-center">Client not found</div>;
                 case 'tasks': return <TasksView tasks={displayData.tasks} clients={displayData.clients} onSaveTask={displayData.handlers.handleSaveTask} onToggleTask={displayData.handlers.handleToggleTask} onDeleteTask={displayData.handlers.handleDeleteTask} onSelectClient={(id) => handleNavigate(`client/${id}`)} />;
-                case 'agents': return <AgentManagement currentUser={displayUser!} agents={displayData.agents} users={displayData.users} clients={displayData.clients} policies={displayData.policies} onNavigate={handleNavigate} onAddAgent={() => { setAgentToEdit(null); setIsAddEditAgentModalOpen(true); }} onEditAgent={(agent) => { setAgentToEdit(agent); setIsAddEditAgentModalOpen(true); }} onApproveAgent={handleApproveAgent} onDeactivateAgent={displayData.handlers.handleDeactivateAgent} onReactivateAgent={displayData.handlers.handleReactivateAgent} onRejectAgent={displayData.handlers.handleRejectAgent} onDeleteAgent={displayData.handlers.handleDeleteAgent} highlightedAgentId={highlightedAgentId} />;
+                case 'agents': return <AgentManagement currentUser={displayUser!} agents={displayData.agents} users={displayData.users} clients={displayData.clients} policies={displayData.policies} onNavigate={handleNavigate} onAddAgent={() => { setAgentToEdit(null); setIsAddEditAgentModalOpen(true); }} onEditAgent={(agent) => { const user = displayData.users.find(u => u.id === agent.id); setAgentToEdit(agent); setRoleOfAgentToEdit(user?.role || null); setIsAddEditAgentModalOpen(true); }} onApproveAgent={handleApproveAgent} onDeactivateAgent={displayData.handlers.handleDeactivateAgent} onReactivateAgent={displayData.handlers.handleReactivateAgent} onRejectAgent={displayData.handlers.handleRejectAgent} onDeleteAgent={displayData.handlers.handleDeleteAgent} highlightedAgentId={highlightedAgentId} />;
                 case 'agent': {
                     const agentForProfile = viewParam ? displayData.agents.find(a => a.slug === viewParam) : null;
                     if (!agentForProfile) return <div className="p-8 text-center">Agent not found</div>;
@@ -512,7 +513,7 @@ const App: React.FC = () => {
             <AddClientModal isOpen={isAddClientModalOpen} onClose={() => setIsAddClientModalOpen(false)} onAddClient={displayData.handlers.handleAddClient} />
             <EditClientModal isOpen={isEditClientModalOpen} onClose={() => setIsEditClientModalOpen(false)} onSave={handleSaveEditedClient} clientToEdit={clientToEdit} />
             <AddEditPolicyModal isOpen={isAddEditPolicyModalOpen} onClose={() => setIsAddEditPolicyModalOpen(false)} onSave={displayData.handlers.handleSavePolicy} policyToEdit={policyToEdit} clientId={policyClientId} />
-            <AddEditAgentModal isOpen={isAddEditAgentModalOpen} onClose={() => setIsAddEditAgentModalOpen(false)} onSave={handleSaveAgent} agentToEdit={agentToEdit} />
+            <AddEditAgentModal isOpen={isAddEditAgentModalOpen} onClose={() => setIsAddEditAgentModalOpen(false)} onSave={handleSaveAgent} agentToEdit={agentToEdit} currentUser={displayUser} roleOfAgentToEdit={roleOfAgentToEdit} />
             <EditMyProfileModal isOpen={isEditMyProfileModalOpen} onClose={() => setIsEditMyProfileModalOpen(false)} onSave={displayData.handlers.handleUpdateMyProfile} currentUser={displayUser} />
             <AddEditLeadModal isOpen={isAddEditLeadModalOpen} onClose={() => setIsAddEditLeadModalOpen(false)} onSave={handleSaveLead} agents={displayData.agents} leadToEdit={leadToEdit} />
             <AddEditTaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} onSave={onAICreateTask} taskToEdit={taskToCreate} clients={displayData.clients} />

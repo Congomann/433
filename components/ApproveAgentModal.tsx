@@ -48,6 +48,8 @@ const ApproveAgentModal: React.FC<ApproveAgentModalProps> = ({ isOpen, onClose, 
                 >
                     <option value={UserRole.AGENT}>Agent</option>
                     <option value={UserRole.SUB_ADMIN}>Sub-Admin</option>
+                    <option value={UserRole.MANAGER}>Manager</option>
+                    <option value={UserRole.UNDERWRITING}>Underwriting</option>
                 </select>
                 <p className="text-xs text-slate-500 mt-1">This will determine their permissions within the CRM.</p>
             </div>
