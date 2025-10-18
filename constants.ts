@@ -7,7 +7,7 @@ import React from 'react';
 // NOTE: Passwords for mock users are intentionally omitted.
 // For the demo, log in with any of these emails and the password 'password123'.
 // Newly registered users will have their passwords stored securely (simulated).
-export const MOCK_USERS: User[] = [
+const BASE_MOCK_USERS: User[] = [
     // Default system administrator login. This should remain permanent.
     { id: 1, name: 'Adama Lee', email: 'Support@newhollandfinancial.com', password: 'Support@2025', role: UserRole.ADMIN, avatar: 'https://i.pravatar.cc/150?u=admin', title: 'System Administrator' },
     { id: 2, name: 'Gaius Baltar', email: 'subadmin@newhollandfinancial.com', role: UserRole.SUB_ADMIN, avatar: 'https://i.pravatar.cc/150?u=subadmin', title: 'Lead Manager' },
@@ -21,7 +21,7 @@ export const MOCK_USERS: User[] = [
     { id: 10, name: 'Tory Foster', email: 'underwriting@newhollandfinancial.com', role: UserRole.UNDERWRITING, avatar: 'https://i.pravatar.cc/150?u=underwriter', title: 'Underwriting Specialist' },
 ];
 
-export const MOCK_AGENTS: Agent[] = [
+const BASE_MOCK_AGENTS: Agent[] = [
     { 
         id: 3, 
         name: 'Kara Thrace', 
@@ -139,17 +139,28 @@ export const MOCK_AGENTS: Agent[] = [
     },
 ];
 
-export const MOCK_TESTIMONIALS: Testimonial[] = [
-    { id: 1, agentId: 3, author: 'Maria G.', quote: 'Kara helped me find affordable coverage for my family. I feel so much more secure knowing we’re protected.', status: TestimonialStatus.APPROVED, submissionDate: '2024-07-24' },
-    { id: 2, agentId: 3, author: 'David L.', quote: 'Extremely knowledgeable and patient. Kara walked me through all my options without any pressure.', status: TestimonialStatus.APPROVED, submissionDate: '2024-07-23' },
-    { id: 5, agentId: 3, author: 'Samuel T.', quote: 'Working with Kara was a breeze. She is very responsive and clearly explained everything. I highly recommend her services!', status: TestimonialStatus.PENDING, submissionDate: '2024-07-24' },
-];
-
-export const MOCK_CLIENTS: Client[] = [
+const BASE_MOCK_CLIENTS: Client[] = [
   { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@example.com', phone: '555-0101', address: '123 Maple St, Springfield, IL', city: 'Springfield', state: 'IL', status: ClientStatus.ACTIVE, joinDate: '2024-07-23', agentId: 3 },
   { id: 3, firstName: 'Alice', lastName: 'Johnson', email: 'alice.j@example.com', phone: '555-0103', address: '789 Pine Ln, Gotham, NJ', city: 'Gotham', state: 'NJ', status: ClientStatus.LEAD, joinDate: '2024-07-23' },
   { id: 5, firstName: 'Charlie', lastName: 'Davis', email: 'charlie.d@example.com', phone: '555-0105', address: '212 Cedar Blvd, Central City, MO', city: 'Central City', state: 'MO', status: ClientStatus.ACTIVE, joinDate: '2024-07-24', agentId: 4 },
   { id: 6, firstName: 'Diana', lastName: 'Prince', email: 'diana.p@example.com', phone: '555-0106', address: '1 Paradise Island, Themyscira', city: 'Themyscira', state: 'DC', status: ClientStatus.LEAD, joinDate: '2024-07-24' },
+];
+
+const BASE_MOCK_POLICIES: Policy[] = [
+  { id: 101, clientId: 1, policyNumber: 'AUT-12345', type: PolicyType.AUTO, annualPremium: 1200, monthlyPremium: 100, startDate: '2024-01-15', endDate: '2025-01-15', status: PolicyStatus.ACTIVE, carrier: 'Geico', underwritingStatus: PolicyUnderwritingStatus.APPROVED },
+  { id: 102, clientId: 1, policyNumber: 'HOM-67890', type: PolicyType.HOME, annualPremium: 800, monthlyPremium: 66.67, startDate: '2024-07-23', endDate: '2025-07-23', status: PolicyStatus.ACTIVE, carrier: 'Foremost Insurance Co', underwritingStatus: PolicyUnderwritingStatus.PENDING },
+  { id: 106, clientId: 5, policyNumber: 'HOM-PQRST', type: PolicyType.HOME, annualPremium: 950, monthlyPremium: 79.17, startDate: '2024-07-24', endDate: '2025-07-24', status: PolicyStatus.ACTIVE, carrier: 'National Life Group', underwritingStatus: PolicyUnderwritingStatus.APPROVED },
+];
+
+export const MOCK_USERS: User[] = [...BASE_MOCK_USERS];
+export const MOCK_AGENTS: Agent[] = [...BASE_MOCK_AGENTS];
+export const MOCK_CLIENTS: Client[] = [...BASE_MOCK_CLIENTS];
+export const MOCK_POLICIES: Policy[] = [...BASE_MOCK_POLICIES];
+
+export const MOCK_TESTIMONIALS: Testimonial[] = [
+    { id: 1, agentId: 3, author: 'Maria G.', quote: 'Kara helped me find affordable coverage for my family. I feel so much more secure knowing we’re protected.', status: TestimonialStatus.APPROVED, submissionDate: '2024-07-24' },
+    { id: 2, agentId: 3, author: 'David L.', quote: 'Extremely knowledgeable and patient. Kara walked me through all my options without any pressure.', status: TestimonialStatus.APPROVED, submissionDate: '2024-07-23' },
+    { id: 5, agentId: 3, author: 'Samuel T.', quote: 'Working with Kara was a breeze. She is very responsive and clearly explained everything. I highly recommend her services!', status: TestimonialStatus.PENDING, submissionDate: '2024-07-24' },
 ];
 
 export const MOCK_LICENSES: License[] = [
@@ -178,12 +189,6 @@ export const INSURANCE_CARRIERS: string[] = [
   'Fidelity & Guaranty Life Insurance Company',
   'Symetra Life Insurance',
   'Transamerica Life Insurance',
-];
-
-export const MOCK_POLICIES: Policy[] = [
-  { id: 101, clientId: 1, policyNumber: 'AUT-12345', type: PolicyType.AUTO, annualPremium: 1200, monthlyPremium: 100, startDate: '2024-01-15', endDate: '2025-01-15', status: PolicyStatus.ACTIVE, carrier: 'Geico', underwritingStatus: PolicyUnderwritingStatus.APPROVED },
-  { id: 102, clientId: 1, policyNumber: 'HOM-67890', type: PolicyType.HOME, annualPremium: 800, monthlyPremium: 66.67, startDate: '2024-07-23', endDate: '2025-07-23', status: PolicyStatus.ACTIVE, carrier: 'Foremost Insurance Co', underwritingStatus: PolicyUnderwritingStatus.PENDING },
-  { id: 106, clientId: 5, policyNumber: 'HOM-PQRST', type: PolicyType.HOME, annualPremium: 950, monthlyPremium: 79.17, startDate: '2024-07-24', endDate: '2025-07-24', status: PolicyStatus.ACTIVE, carrier: 'National Life Group', underwritingStatus: PolicyUnderwritingStatus.APPROVED },
 ];
 
 export const MOCK_INTERACTIONS: Interaction[] = [

@@ -236,16 +236,16 @@ export const analyzeOnboardingDocument = async (base64Image: string, mimeType: s
 
 export const summarizeOnboardingConversation = async (transcript: string): Promise<any> => {
     try {
-        const prompt = `You are an expert insurance agent assistant. Analyze the following conversation transcript between an agent and a prospective client. Extract key information and structure it as a JSON object for CRM entry. The client's responses are spoken by the 'AI'. The agent is 'You'.
+        const prompt = `You are an expert insurance agent assistant. Analyze the following follow-up call transcript between an agent and a lead. Your goal is to extract key outcomes and structure it as a JSON object for the CRM.
 
         Transcript:
         ${transcript}
 
         Based on the conversation, provide a summary covering the following points:
-        1. A brief summary of the client's profile and situation.
-        2. A list of needs the client explicitly or implicitly mentioned.
-        3. A list of specific insurance products to recommend, with a brief reason for each recommendation.
-        4. A list of actionable next steps for the agent.`;
+        1.  **Call Synopsis:** A brief, one-paragraph summary of the conversation's purpose and outcome.
+        2.  **Lead's Interest Level:** A bulleted list assessing the lead's interest (e.g., "Highly interested, asked about pricing," "Still considering, mentioned competitor X," "Not interested at this time").
+        3.  **Key Objections/Questions:** A bulleted list of any new concerns, objections, or specific questions the lead raised.
+        4.  **Actionable Next Steps:** A short, bulleted list of 2-3 concrete next steps for the agent (e.g., "Schedule a formal appointment for Tuesday," "Send comparison quote for competitor X," "Follow up in one week."). If an appointment was set, specify the date and time.`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-pro',
@@ -255,22 +255,22 @@ export const summarizeOnboardingConversation = async (transcript: string): Promi
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: {
-                        profileSummary: { type: Type.STRING, description: "A one-paragraph summary of the client's life situation, family, and financial goals." },
-                        identifiedNeeds: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of key insurance needs identified during the conversation." },
+                        profileSummary: { type: Type.STRING, description: "A one-paragraph summary of the call's purpose and outcome." },
+                        identifiedNeeds: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of the lead's current interest level and any objections or questions they raised." },
                         productRecommendations: {
                             type: Type.ARRAY,
                             items: {
                                 type: Type.OBJECT,
                                 properties: {
-                                    productName: { type: Type.STRING, description: "The name of the recommended insurance product (e.g., 'Term Life Insurance')." },
-                                    reason: { type: Type.STRING, description: "A brief explanation of why this product is a good fit for the client." }
+                                    productName: { type: Type.STRING, description: "This key is not needed. Instead, put the lead's interest level and objections in the 'identifiedNeeds' array." },
+                                    reason: { type: Type.STRING, description: "This key is not needed." }
                                 }
                             },
-                            description: "A list of recommended insurance products."
+                            description: "This key is not needed."
                         },
-                        nextSteps: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of concrete next steps the agent should take." }
+                        nextSteps: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of concrete next steps the agent should take, including any appointments set." }
                     },
-                    required: ["profileSummary", "identifiedNeeds", "productRecommendations", "nextSteps"]
+                    required: ["profileSummary", "identifiedNeeds", "nextSteps"]
                 }
             }
         });

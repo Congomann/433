@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon, AiSparklesIcon, UsersIcon, ShieldCheckIcon, BroadcastIcon, LogoutIcon, RocketLaunchIcon, ExclamationTriangleIcon, TrophyIcon, DocumentTextIcon } from './icons';
+import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon, AiSparklesIcon, UsersIcon, ShieldCheckIcon, BroadcastIcon, LogoutIcon, RocketLaunchIcon, ExclamationTriangleIcon, TrophyIcon, DocumentTextIcon, PhoneIcon } from './icons';
 import { User, UserRole, Notification, NotificationType } from '../types';
 
 interface SidebarProps {
@@ -19,6 +19,7 @@ const navConfig = {
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     { id: 'ai-assistant', label: 'AI Assistant', icon: <AiSparklesIcon /> },
     { id: 'ai-onboarding', label: 'AI Onboarding', icon: <RocketLaunchIcon /> },
+    { id: 'ai-call-assistant', label: 'AI Call Assistant', icon: <PhoneIcon /> },
     { id: 'clients', label: 'Clients', icon: <ClientsIcon /> },
     { id: 'agents', label: 'Agents', icon: <ClientsIcon /> },
     { id: 'tasks', label: 'Tasks', icon: <TasksIcon /> },
@@ -42,6 +43,7 @@ const navConfig = {
     { id: 'dashboard', label: 'Lead Dashboard', icon: <DashboardIcon /> },
     { id: 'ai-assistant', label: 'AI Assistant', icon: <AiSparklesIcon /> },
     { id: 'ai-onboarding', label: 'AI Onboarding', icon: <RocketLaunchIcon /> },
+    { id: 'ai-call-assistant', label: 'AI Call Assistant', icon: <PhoneIcon /> },
     { id: 'leads', label: 'Lead Distribution', icon: <ClientsIcon /> },
     { id: 'agents', label: 'View Agents', icon: <UsersIcon /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
@@ -50,6 +52,7 @@ const navConfig = {
   [UserRole.AGENT]: [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     { id: 'ai-assistant', label: 'AI Assistant', icon: <AiSparklesIcon /> },
+    { id: 'ai-call-assistant', label: 'AI Call Assistant', icon: <PhoneIcon /> },
     { id: 'clients', label: 'My Clients', icon: <ClientsIcon /> },
     { id: 'tasks', label: 'My Tasks', icon: <TasksIcon /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },

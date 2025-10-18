@@ -103,6 +103,7 @@ export const getAllData = async (currentUser: User) => {
             allData.testimonials = allData.testimonials.filter((t: Testimonial) => t.agentId === currentUser.id);
             // FIX: Filter chargebacks for the current agent to maintain data security scope.
             allData.chargebacks = allData.chargebacks.filter((c: Chargeback) => c.agentId === currentUser.id);
+            allData.calendarNotes = allData.calendarNotes.filter((cn: CalendarNote) => cn.userId === currentUser.id);
         }
     }
 

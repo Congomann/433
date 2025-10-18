@@ -1,7 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Agent, AgentStatus, User, UserRole, Client, Policy } from '../types';
 import { PlusIcon, PencilIcon, TrashIcon } from './icons';
 import ApproveAgentModal from './ApproveAgentModal';
+import Pagination from './Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 interface AgentManagementProps {
   currentUser: User;
@@ -53,7 +56,7 @@ const ActionButton: React.FC<{ onClick: () => void, text: string, color: 'emeral
 };
 
 const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[], highlightedAgentId: number | null, onNavigate: (view: string) => void, onEditAgent: (agent: Agent) => void, onDeactivateAgent: (agentId: number) => void, canManage: boolean}> = ({ agents, highlightedAgentId, onNavigate, onEditAgent, onDeactivateAgent, canManage }) => (
-    <div className="bg-white rounded-b-lg rounded-tr-lg border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-t-lg border-x border-t border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
@@ -115,7 +118,7 @@ const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[],
 );
 
 const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number | null, onReactivateAgent: (agentId: number) => void, onDeleteAgent: (agentId: number) => void, canManage: boolean}> = ({ agents, highlightedAgentId, onReactivateAgent, onDeleteAgent, canManage }) => (
-    <div className="bg-white rounded-b-lg rounded-tr-lg border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-t-lg border-x border-t border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
@@ -172,7 +175,7 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number
 );
 
 const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent) => void, onRejectAgent: (agentId: number) => void, setAgentToApprove: (agent: Agent) => void, canManage: boolean}> = ({ agents, onEditAgent, onRejectAgent, setAgentToApprove, canManage }) => (
-    <div className="bg-white rounded-b-lg rounded-tr-lg border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-t-lg border-x border-t border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
@@ -231,6 +234,11 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
 const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, users, clients, policies, onNavigate, onAddAgent, onEditAgent, onApproveAgent, onDeactivateAgent, onReactivateAgent, onRejectAgent, onDeleteAgent, highlightedAgentId }) => {
   const [activeTab, setActiveTab] = useState<AgentTableTab>('active');
   const [agentToApprove, setAgentToApprove] = useState<Agent | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   const canManage = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER;
 
@@ -266,6 +274,20 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
   
   const userForApproval = users.find(u => u.id === agentToApprove?.id);
 
+  const paginatedActive = useMemo(() => activeAgents.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [activeAgents, currentPage]);
+  const paginatedPending = useMemo(() => pendingAgents.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [pendingAgents, currentPage]);
+  const paginatedInactive = useMemo(() => inactiveAgents.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [inactiveAgents, currentPage]);
+
+  const totalPages = useMemo(() => {
+    switch (activeTab) {
+        case 'active': return Math.ceil(activeAgents.length / ITEMS_PER_PAGE);
+        case 'pending': return Math.ceil(pendingAgents.length / ITEMS_PER_PAGE);
+        case 'inactive': return Math.ceil(inactiveAgents.length / ITEMS_PER_PAGE);
+        default: return 1;
+    }
+  }, [activeTab, activeAgents, pendingAgents, inactiveAgents]);
+
+
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
@@ -287,9 +309,24 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
       </div>
 
       <div className="mt-4">
-        {activeTab === 'active' && <ActiveAgentsTable agents={activeAgents} highlightedAgentId={highlightedAgentId} onNavigate={onNavigate} onEditAgent={onEditAgent} onDeactivateAgent={(id) => {onDeactivateAgent(id); setActiveTab('inactive');}} canManage={canManage} />}
-        {activeTab === 'pending' && <PendingAgentsTable agents={pendingAgents} onEditAgent={onEditAgent} onRejectAgent={(id) => {onRejectAgent(id); setActiveTab('inactive');}} setAgentToApprove={setAgentToApprove} canManage={canManage} />}
-        {activeTab === 'inactive' && <InactiveAgentsTable agents={inactiveAgents} highlightedAgentId={highlightedAgentId} onReactivateAgent={(id) => {onReactivateAgent(id); setActiveTab('active');}} onDeleteAgent={onDeleteAgent} canManage={canManage} />}
+        {activeTab === 'active' && (
+            <div className="rounded-lg shadow-sm border border-slate-200">
+                <ActiveAgentsTable agents={paginatedActive} highlightedAgentId={highlightedAgentId} onNavigate={onNavigate} onEditAgent={onEditAgent} onDeactivateAgent={(id) => {onDeactivateAgent(id); setActiveTab('inactive');}} canManage={canManage} />
+                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            </div>
+        )}
+        {activeTab === 'pending' && (
+            <div className="rounded-lg shadow-sm border border-slate-200">
+                <PendingAgentsTable agents={paginatedPending} onEditAgent={onEditAgent} onRejectAgent={(id) => {onRejectAgent(id); setActiveTab('inactive');}} setAgentToApprove={setAgentToApprove} canManage={canManage} />
+                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            </div>
+        )}
+        {activeTab === 'inactive' && (
+            <div className="rounded-lg shadow-sm border border-slate-200">
+                <InactiveAgentsTable agents={paginatedInactive} highlightedAgentId={highlightedAgentId} onReactivateAgent={(id) => {onReactivateAgent(id); setActiveTab('active');}} onDeleteAgent={onDeleteAgent} canManage={canManage} />
+                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            </div>
+        )}
       </div>
       {canManage && (
         <ApproveAgentModal

@@ -1,6 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Client, ClientStatus, Agent } from '../types';
 import { PlusIcon, CloseIcon, SearchIcon, UserCircleIcon } from './icons';
+import Pagination from './Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 interface ClientListProps {
   title: string;
@@ -14,6 +17,7 @@ interface ClientListProps {
 const ClientList: React.FC<ClientListProps> = ({ title, clients, onSelectClient, onAddClient, agentFilter, onClearFilter }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredClients = useMemo(() => {
     return clients.filter(client => {
@@ -24,6 +28,17 @@ const ClientList: React.FC<ClientListProps> = ({ title, clients, onSelectClient,
       return matchesSearch && matchesStatus;
     });
   }, [clients, searchTerm, statusFilter]);
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, agentFilter]);
+
+  const totalPages = Math.ceil(filteredClients.length / ITEMS_PER_PAGE);
+  const paginatedClients = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredClients.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredClients, currentPage]);
+
 
   const getStatusColor = (status: ClientStatus) => {
     switch (status) {
@@ -86,52 +101,59 @@ const ClientList: React.FC<ClientListProps> = ({ title, clients, onSelectClient,
         </select>
       </div>
 
-      <div className="bg-white/70 backdrop-blur-lg rounded-2xl border border-white/50 shadow-premium overflow-x-auto">
-        <table className="min-w-full">
-          <thead className="bg-slate-50/50">
-            <tr>
-              <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-              <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
-              <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-              <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Join Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredClients.map((client) => (
-              <tr 
-                key={client.id} 
-                onClick={() => onSelectClient(client.id)} 
-                className="hover:shadow-md hover:bg-slate-50/50 cursor-pointer transition-all duration-200 row-enter border-b border-slate-200/50 last:border-b-0 group"
-                >
-                <td className="px-6 py-5 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <UserCircleIcon className="h-10 w-10 text-slate-300" />
-                    <div className="ml-4">
-                      <div className="text-sm font-bold text-slate-900">{client.firstName} {client.lastName}</div>
-                      <div className="text-sm text-slate-500">{client.address}</div>
+      <div className="bg-white/70 backdrop-blur-lg rounded-2xl border border-white/50 shadow-premium">
+        <div className="overflow-x-auto">
+            <table className="min-w-full">
+            <thead className="bg-slate-50/50">
+                <tr>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Join Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {paginatedClients.map((client) => (
+                <tr 
+                    key={client.id} 
+                    onClick={() => onSelectClient(client.id)} 
+                    className="hover:shadow-md hover:bg-slate-50/50 cursor-pointer transition-all duration-200 row-enter border-b border-slate-200/50 last:border-b-0 group"
+                    >
+                    <td className="px-6 py-5 whitespace-nowrap">
+                    <div className="flex items-center">
+                        <UserCircleIcon className="h-10 w-10 text-slate-300" />
+                        <div className="ml-4">
+                        <div className="text-sm font-bold text-slate-900">{client.firstName} {client.lastName}</div>
+                        <div className="text-sm text-slate-500">{client.address}</div>
+                        </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-5 whitespace-nowrap">
-                  <div className="text-sm text-slate-900">{client.email}</div>
-                  <div className="text-sm text-slate-500">{client.phone}</div>
-                </td>
-                <td className="px-6 py-5 whitespace-nowrap">
-                  <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ring-1 ring-inset ${getStatusColor(client.status)}`}>
-                    {client.status}
-                  </span>
-                </td>
-                <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500">{client.joinDate}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    </td>
+                    <td className="px-6 py-5 whitespace-nowrap">
+                    <div className="text-sm text-slate-900">{client.email}</div>
+                    <div className="text-sm text-slate-500">{client.phone}</div>
+                    </td>
+                    <td className="px-6 py-5 whitespace-nowrap">
+                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ring-1 ring-inset ${getStatusColor(client.status)}`}>
+                        {client.status}
+                    </span>
+                    </td>
+                    <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500">{client.joinDate}</td>
+                </tr>
+                ))}
+            </tbody>
+            </table>
+        </div>
          {filteredClients.length === 0 && (
             <div className="text-center p-12 text-slate-500">
                 <p className="font-semibold">No clients found</p>
                 <p className="text-sm mt-1">Try adjusting your search or filter.</p>
             </div>
         )}
+        <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+        />
       </div>
     </div>
   );
