@@ -122,6 +122,11 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
             return await db.createRecord(resource, body);
         }
         if (method === 'PUT' && id) {
+            if (resource === 'agents') {
+                if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
+                    throw { status: 403, message: 'Only Admins and Managers can edit agent profiles.' };
+                }
+            }
              if (resource === 'policies') {
                 const originalPolicy = await db.getRecordById<Policy>(resource, id);
                 if (!originalPolicy) throw { status: 404, message: "Policy not found" };

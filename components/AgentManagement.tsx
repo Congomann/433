@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Agent, AgentStatus, User, UserRole } from '../types';
+import { Agent, AgentStatus, User, UserRole, Client, Policy } from '../types';
 import { PlusIcon, PencilIcon, TrashIcon } from './icons';
 import ApproveAgentModal from './ApproveAgentModal';
 
@@ -7,6 +7,8 @@ interface AgentManagementProps {
   currentUser: User;
   agents: Agent[];
   users: User[];
+  clients: Client[];
+  policies: Policy[];
   onNavigate: (view: string) => void;
   onAddAgent: () => void;
   onEditAgent: (agent: Agent) => void;
@@ -19,6 +21,8 @@ interface AgentManagementProps {
 }
 
 type AgentTableTab = 'active' | 'pending' | 'inactive';
+
+const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
 
 const TabButton: React.FC<{tabId: AgentTableTab, label: string, count: number, activeTab: AgentTableTab, setActiveTab: (tabId: AgentTableTab) => void}> = ({ tabId, label, count, activeTab, setActiveTab }) => (
     <button
@@ -48,7 +52,7 @@ const ActionButton: React.FC<{ onClick: () => void, text: string, color: 'emeral
     );
 };
 
-const ActiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number | null, onNavigate: (view: string) => void, onDeactivateAgent: (agentId: number) => void, canManage: boolean}> = ({ agents, highlightedAgentId, onNavigate, onDeactivateAgent, canManage }) => (
+const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[], highlightedAgentId: number | null, onNavigate: (view: string) => void, onEditAgent: (agent: Agent) => void, onDeactivateAgent: (agentId: number) => void, canManage: boolean}> = ({ agents, highlightedAgentId, onNavigate, onEditAgent, onDeactivateAgent, canManage }) => (
     <div className="bg-white rounded-b-lg rounded-tr-lg border border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -57,6 +61,7 @@ const ActiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number |
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Clients</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Commission</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Total AP</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Joined</th>
               {canManage && <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
             </tr>
@@ -80,20 +85,26 @@ const ActiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number |
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{agent.clientCount}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{(agent.commissionRate * 100).toFixed(0)}%</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600">{formatCurrency(agent.totalPremium)}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{agent.joinDate}</td>
                 {canManage && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <ActionButton
-                            onClick={() => {
-                                if (window.confirm("Are you sure you want to deactivate this agent's account? Their access will be revoked, and they will be moved to the Inactive list. This action is reversible.")) {
-                                    onDeactivateAgent(agent.id);
-                                }
-                            }}
-                            text="Deactivate"
-                            color="amber"
-                            ariaLabel={`Deactivate ${agent.name}`}
-                            title="Deactivate agent"
-                        />
+                       <div className="flex items-center space-x-4">
+                            <button onClick={() => onEditAgent(agent)} className="text-slate-500 hover:text-primary-600 transition-colors p-1" aria-label={`Edit ${agent.name}`} title={`Edit ${agent.name}`}>
+                                <PencilIcon />
+                            </button>
+                            <ActionButton
+                                onClick={() => {
+                                    if (window.confirm("Are you sure you want to deactivate this agent's account? Their access will be revoked, and they will be moved to the Inactive list. This action is reversible.")) {
+                                        onDeactivateAgent(agent.id);
+                                    }
+                                }}
+                                text="Deactivate"
+                                color="amber"
+                                ariaLabel={`Deactivate ${agent.name}`}
+                                title="Deactivate agent"
+                            />
+                        </div>
                     </td>
                 )}
               </tr>
@@ -217,32 +228,41 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
 );
 
 
-const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, users, onNavigate, onAddAgent, onEditAgent, onApproveAgent, onDeactivateAgent, onReactivateAgent, onRejectAgent, onDeleteAgent, highlightedAgentId }) => {
+const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, users, clients, policies, onNavigate, onAddAgent, onEditAgent, onApproveAgent, onDeactivateAgent, onReactivateAgent, onRejectAgent, onDeleteAgent, highlightedAgentId }) => {
   const [activeTab, setActiveTab] = useState<AgentTableTab>('active');
   const [agentToApprove, setAgentToApprove] = useState<Agent | null>(null);
 
   const canManage = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER;
 
+  const agentPerformanceData = useMemo(() => {
+    return agents.map(agent => {
+        const agentClientIds = clients.filter(c => c.agentId === agent.id).map(c => c.id);
+        const agentPolicies = policies.filter(p => agentClientIds.includes(p.clientId) && p.status === 'Active');
+        const totalPremium = agentPolicies.reduce((sum, p) => sum + p.annualPremium, 0);
+        return { ...agent, totalPremium };
+    });
+  }, [agents, clients, policies]);
+
   // Group agents by status in a single pass for efficiency and clarity.
   const { activeAgents, pendingAgents, inactiveAgents } = useMemo(() => {
     const grouped = {
-      [AgentStatus.ACTIVE]: [] as Agent[],
-      [AgentStatus.PENDING]: [] as Agent[],
-      [AgentStatus.INACTIVE]: [] as Agent[],
+      [AgentStatus.ACTIVE]: [] as (Agent & { totalPremium: number })[],
+      [AgentStatus.PENDING]: [] as (Agent & { totalPremium: number })[],
+      [AgentStatus.INACTIVE]: [] as (Agent & { totalPremium: number })[],
     };
 
-    agents.forEach(agent => {
+    agentPerformanceData.forEach(agent => {
       if (grouped[agent.status]) {
           grouped[agent.status].push(agent);
       }
     });
 
     return {
-      activeAgents: grouped[AgentStatus.ACTIVE],
+      activeAgents: grouped[AgentStatus.ACTIVE].sort((a, b) => b.totalPremium - a.totalPremium),
       pendingAgents: grouped[AgentStatus.PENDING],
       inactiveAgents: grouped[AgentStatus.INACTIVE],
     };
-  }, [agents]);
+  }, [agentPerformanceData]);
   
   const userForApproval = users.find(u => u.id === agentToApprove?.id);
 
@@ -267,7 +287,7 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
       </div>
 
       <div className="mt-4">
-        {activeTab === 'active' && <ActiveAgentsTable agents={activeAgents} highlightedAgentId={highlightedAgentId} onNavigate={onNavigate} onDeactivateAgent={(id) => {onDeactivateAgent(id); setActiveTab('inactive');}} canManage={canManage} />}
+        {activeTab === 'active' && <ActiveAgentsTable agents={activeAgents} highlightedAgentId={highlightedAgentId} onNavigate={onNavigate} onEditAgent={onEditAgent} onDeactivateAgent={(id) => {onDeactivateAgent(id); setActiveTab('inactive');}} canManage={canManage} />}
         {activeTab === 'pending' && <PendingAgentsTable agents={pendingAgents} onEditAgent={onEditAgent} onRejectAgent={(id) => {onRejectAgent(id); setActiveTab('inactive');}} setAgentToApprove={setAgentToApprove} canManage={canManage} />}
         {activeTab === 'inactive' && <InactiveAgentsTable agents={inactiveAgents} highlightedAgentId={highlightedAgentId} onReactivateAgent={(id) => {onReactivateAgent(id); setActiveTab('active');}} onDeleteAgent={onDeleteAgent} canManage={canManage} />}
       </div>
