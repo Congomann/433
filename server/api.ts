@@ -6,7 +6,7 @@ import * as messagesController from './controllers/messagesController';
 import * as dataController from './controllers/dataController';
 import * as auth from './auth';
 import { db } from './db';
-import { User, UserRole, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, PolicyStatus, Chargeback, ChargebackStatus, NotificationType } from '../types';
+import { User, UserRole, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, PolicyStatus, Chargeback, ChargebackStatus, NotificationType, PolicyUnderwritingStatus } from '../types';
 
 const SIMULATED_LATENCY = 0; // ms
 
@@ -127,9 +127,24 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
                 if (!originalPolicy) throw { status: 404, message: "Policy not found" };
 
                 const isCancelling = body.status === PolicyStatus.CANCELLED && originalPolicy.status !== PolicyStatus.CANCELLED;
+                const isUnderwritingUpdate = body.underwritingStatus && body.underwritingStatus !== originalPolicy.underwritingStatus;
 
                 const policyResult = await db.updateRecord<Policy>(resource, id, body);
                 
+                if (isUnderwritingUpdate) {
+                    const client = await db.clients.findById(policyResult.clientId);
+                    if (client && client.agentId) {
+                         await db.createRecord<Omit<Notification, 'id'>>('notifications', {
+                            userId: client.agentId,
+                            type: NotificationType.UNDERWRITING_REVIEWED,
+                            message: `Policy #${policyResult.policyNumber} for ${client.firstName} ${client.lastName} was updated to: ${policyResult.underwritingStatus}.`,
+                            timestamp: new Date().toISOString(),
+                            isRead: false,
+                            link: `client/${client.id}`
+                        });
+                    }
+                }
+
                 if (isCancelling) {
                     const startDate = new Date(originalPolicy.startDate);
                     const cancellationDate = new Date();
@@ -178,7 +193,7 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
                 }
 
 
-                if (policyResult) {
+                if (policyResult && !isUnderwritingUpdate) {
                     const client = await db.clients.findById(policyResult.clientId);
                     if (client && client.agentId) {
                          const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];

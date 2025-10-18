@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Policy, PolicyStatus, PolicyType } from '../types';
+import { Policy, PolicyStatus, PolicyType, PolicyUnderwritingStatus } from '../types';
 import { CloseIcon, PlusIcon } from './icons';
 import { INSURANCE_CARRIERS } from '../constants';
 
@@ -86,6 +86,7 @@ const AddEditPolicyModal: React.FC<AddEditPolicyModalProps> = ({ isOpen, onClose
       annualPremium: parseFloat(formData.annualPremium) || 0,
       type: formData.type as PolicyType,
       status: formData.status as PolicyStatus,
+      underwritingStatus: policyToEdit?.underwritingStatus || PolicyUnderwritingStatus.PENDING,
     });
   };
 

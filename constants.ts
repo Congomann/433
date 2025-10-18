@@ -1,4 +1,4 @@
-import { Client, Policy, Interaction, Task, ClientStatus, PolicyType, PolicyStatus, InteractionType, User, UserRole, Agent, Message, AgentStatus, License, LicenseType, Notification, CalendarNote, Testimonial, TestimonialStatus, CalendarEvent, Chargeback, ChargebackStatus } from './types';
+import { Client, Policy, Interaction, Task, ClientStatus, PolicyType, PolicyStatus, InteractionType, User, UserRole, Agent, Message, AgentStatus, License, LicenseType, Notification, CalendarNote, Testimonial, TestimonialStatus, CalendarEvent, Chargeback, ChargebackStatus, PolicyUnderwritingStatus } from './types';
 import { ShieldCheckIcon, CalendarDaysIcon, SunIcon, ArrowsUpDownIcon, ChartTrendingUpIcon, TruckIcon, CarIcon, WrenchScrewdriverIcon, HomeIcon, BuildingOfficeIcon, FireIcon, StethoscopeIcon } from './components/icons';
 import React from 'react';
 
@@ -17,6 +17,8 @@ export const MOCK_USERS: User[] = [
     { id: 6, name: 'Laura Roslin', email: 'laura.r@newhollandfinancial.com', role: UserRole.AGENT, avatar: 'https://i.pravatar.cc/150?u=agent4', title: 'Agent Applicant' },
     { id: 7, name: 'William Adama', email: 'william.a@newhollandfinancial.com', role: UserRole.AGENT, avatar: 'https://i.pravatar.cc/150?u=agent5', title: 'Senior Agent' },
     { id: 8, name: 'Karl Agathon', email: 'karl.a@newhollandfinancial.com', role: UserRole.AGENT, avatar: 'https://i.pravatar.cc/150?u=agent6', title: 'Insurance Agent' },
+    { id: 9, name: 'Felix Gaeta', email: 'manager@newhollandfinancial.com', role: UserRole.MANAGER, avatar: 'https://i.pravatar.cc/150?u=manager', title: 'Regional Manager' },
+    { id: 10, name: 'Tory Foster', email: 'underwriting@newhollandfinancial.com', role: UserRole.UNDERWRITING, avatar: 'https://i.pravatar.cc/150?u=underwriter', title: 'Underwriting Specialist' },
 ];
 
 export const MOCK_AGENTS: Agent[] = [
@@ -179,9 +181,9 @@ export const INSURANCE_CARRIERS: string[] = [
 ];
 
 export const MOCK_POLICIES: Policy[] = [
-  { id: 101, clientId: 1, policyNumber: 'AUT-12345', type: PolicyType.AUTO, annualPremium: 1200, monthlyPremium: 100, startDate: '2024-01-15', endDate: '2025-01-15', status: PolicyStatus.ACTIVE, carrier: 'Geico' },
-  { id: 102, clientId: 1, policyNumber: 'HOM-67890', type: PolicyType.HOME, annualPremium: 800, monthlyPremium: 66.67, startDate: '2024-07-23', endDate: '2025-07-23', status: PolicyStatus.ACTIVE, carrier: 'Foremost Insurance Co' },
-  { id: 106, clientId: 5, policyNumber: 'HOM-PQRST', type: PolicyType.HOME, annualPremium: 950, monthlyPremium: 79.17, startDate: '2024-07-24', endDate: '2025-07-24', status: PolicyStatus.ACTIVE, carrier: 'National Life Group' },
+  { id: 101, clientId: 1, policyNumber: 'AUT-12345', type: PolicyType.AUTO, annualPremium: 1200, monthlyPremium: 100, startDate: '2024-01-15', endDate: '2025-01-15', status: PolicyStatus.ACTIVE, carrier: 'Geico', underwritingStatus: PolicyUnderwritingStatus.APPROVED },
+  { id: 102, clientId: 1, policyNumber: 'HOM-67890', type: PolicyType.HOME, annualPremium: 800, monthlyPremium: 66.67, startDate: '2024-07-23', endDate: '2025-07-23', status: PolicyStatus.ACTIVE, carrier: 'Foremost Insurance Co', underwritingStatus: PolicyUnderwritingStatus.PENDING },
+  { id: 106, clientId: 5, policyNumber: 'HOM-PQRST', type: PolicyType.HOME, annualPremium: 950, monthlyPremium: 79.17, startDate: '2024-07-24', endDate: '2025-07-24', status: PolicyStatus.ACTIVE, carrier: 'National Life Group', underwritingStatus: PolicyUnderwritingStatus.APPROVED },
 ];
 
 export const MOCK_INTERACTIONS: Interaction[] = [

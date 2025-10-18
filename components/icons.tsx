@@ -124,15 +124,15 @@ export const CloseIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
 );
 
 export const CrmLogoIcon: React.FC<IconProps & { variant?: 'light' | 'dark'}> = ({ className = 'w-auto h-10', variant = 'light' }) => (
-    <div className={`flex items-center font-inter ${className}`}>
-        <svg className="w-auto h-8 mr-2" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 3.5L4.5 10V22L16 28.5L27.5 22V10L16 3.5Z" className="fill-primary-600"/>
-            <path d="M16 17.5L4.5 11" className="stroke-primary-400" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M16 17.5V28.5" className="stroke-primary-400" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M16 17.5L27.5 11" className="stroke-primary-400" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M4.5 21L10.25 17.5" className="stroke-primary-400" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <div className={`flex items-center font-sans ${className}`}>
+        <svg className="w-auto h-8 mr-3" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 0L0 13.5V32H36V13.5L18 0Z" fill="#FACC15"/>
+            <circle cx="18" cy="20" r="5" fill="white"/>
         </svg>
-        <div className={`font-extrabold text-xl ${variant === 'light' ? 'text-secondary' : 'text-white'}`}>New Holland</div>
+        <div>
+            <div className={`font-bold text-xl leading-tight ${variant === 'light' ? 'text-secondary' : 'text-white'}`}>New Holland</div>
+            <div className={`text-[10px] font-medium tracking-[0.25em] uppercase mt-1 ${variant === 'light' ? 'text-slate-500' : 'text-slate-300'}`}>Financial Group</div>
+        </div>
     </div>
 );
 

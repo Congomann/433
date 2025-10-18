@@ -48,7 +48,7 @@ const ActionButton: React.FC<{ onClick: () => void, text: string, color: 'emeral
     );
 };
 
-const ActiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number | null, onNavigate: (view: string) => void, onDeactivateAgent: (agentId: number) => void, isAdmin: boolean}> = ({ agents, highlightedAgentId, onNavigate, onDeactivateAgent, isAdmin }) => (
+const ActiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number | null, onNavigate: (view: string) => void, onDeactivateAgent: (agentId: number) => void, canManage: boolean}> = ({ agents, highlightedAgentId, onNavigate, onDeactivateAgent, canManage }) => (
     <div className="bg-white rounded-b-lg rounded-tr-lg border border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -58,7 +58,7 @@ const ActiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number |
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Clients</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Commission</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Joined</th>
-              {isAdmin && <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
+              {canManage && <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-200">
@@ -81,7 +81,7 @@ const ActiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number |
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{agent.clientCount}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{(agent.commissionRate * 100).toFixed(0)}%</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{agent.joinDate}</td>
-                {isAdmin && (
+                {canManage && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <ActionButton
                             onClick={() => {
@@ -103,7 +103,7 @@ const ActiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number |
       </div>
 );
 
-const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number | null, onReactivateAgent: (agentId: number) => void, onDeleteAgent: (agentId: number) => void, isAdmin: boolean}> = ({ agents, highlightedAgentId, onReactivateAgent, onDeleteAgent, isAdmin }) => (
+const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number | null, onReactivateAgent: (agentId: number) => void, onDeleteAgent: (agentId: number) => void, canManage: boolean}> = ({ agents, highlightedAgentId, onReactivateAgent, onDeleteAgent, canManage }) => (
     <div className="bg-white rounded-b-lg rounded-tr-lg border border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -111,7 +111,7 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
-              {isAdmin && <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
+              {canManage && <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-200">
@@ -125,7 +125,7 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{agent.email}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{agent.location}</td>
-                {isAdmin && (
+                {canManage && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-4">
                             <ActionButton
@@ -160,7 +160,7 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number
       </div>
 );
 
-const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent) => void, onRejectAgent: (agentId: number) => void, setAgentToApprove: (agent: Agent) => void, isAdmin: boolean}> = ({ agents, onEditAgent, onRejectAgent, setAgentToApprove, isAdmin }) => (
+const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent) => void, onRejectAgent: (agentId: number) => void, setAgentToApprove: (agent: Agent) => void, canManage: boolean}> = ({ agents, onEditAgent, onRejectAgent, setAgentToApprove, canManage }) => (
     <div className="bg-white rounded-b-lg rounded-tr-lg border border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -168,7 +168,7 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
-              {isAdmin && <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
+              {canManage && <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-200">
@@ -182,7 +182,7 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{agent.email}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{agent.location}</td>
-                {isAdmin && (
+                {canManage && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-4">
                             <ActionButton
@@ -221,7 +221,7 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
   const [activeTab, setActiveTab] = useState<AgentTableTab>('active');
   const [agentToApprove, setAgentToApprove] = useState<Agent | null>(null);
 
-  const isAdmin = currentUser.role === UserRole.ADMIN;
+  const canManage = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER;
 
   // Group agents by status in a single pass for efficiency and clarity.
   const { activeAgents, pendingAgents, inactiveAgents } = useMemo(() => {
@@ -250,7 +250,7 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-extrabold text-slate-800">Agent Management</h1>
-        {isAdmin && (
+        {canManage && (
             <button onClick={onAddAgent} className="flex items-center bg-primary-600 text-white font-semibold px-4 py-2 rounded-md shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors button-press">
               <PlusIcon className="w-5 h-5 mr-2" />
               Add Agent
@@ -267,11 +267,11 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
       </div>
 
       <div className="mt-4">
-        {activeTab === 'active' && <ActiveAgentsTable agents={activeAgents} highlightedAgentId={highlightedAgentId} onNavigate={onNavigate} onDeactivateAgent={(id) => {onDeactivateAgent(id); setActiveTab('inactive');}} isAdmin={isAdmin} />}
-        {activeTab === 'pending' && <PendingAgentsTable agents={pendingAgents} onEditAgent={onEditAgent} onRejectAgent={(id) => {onRejectAgent(id); setActiveTab('inactive');}} setAgentToApprove={setAgentToApprove} isAdmin={isAdmin} />}
-        {activeTab === 'inactive' && <InactiveAgentsTable agents={inactiveAgents} highlightedAgentId={highlightedAgentId} onReactivateAgent={(id) => {onReactivateAgent(id); setActiveTab('active');}} onDeleteAgent={onDeleteAgent} isAdmin={isAdmin} />}
+        {activeTab === 'active' && <ActiveAgentsTable agents={activeAgents} highlightedAgentId={highlightedAgentId} onNavigate={onNavigate} onDeactivateAgent={(id) => {onDeactivateAgent(id); setActiveTab('inactive');}} canManage={canManage} />}
+        {activeTab === 'pending' && <PendingAgentsTable agents={pendingAgents} onEditAgent={onEditAgent} onRejectAgent={(id) => {onRejectAgent(id); setActiveTab('inactive');}} setAgentToApprove={setAgentToApprove} canManage={canManage} />}
+        {activeTab === 'inactive' && <InactiveAgentsTable agents={inactiveAgents} highlightedAgentId={highlightedAgentId} onReactivateAgent={(id) => {onReactivateAgent(id); setActiveTab('active');}} onDeleteAgent={onDeleteAgent} canManage={canManage} />}
       </div>
-      {isAdmin && (
+      {canManage && (
         <ApproveAgentModal
             isOpen={!!agentToApprove}
             onClose={() => setAgentToApprove(null)}

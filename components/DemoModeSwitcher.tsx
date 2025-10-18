@@ -1,101 +1,148 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { User, UserRole, Agent } from '../types';
-import { EyeIcon, UserCircleIcon, UsersIcon, ChevronDownIcon } from './icons';
+import { EyeIcon, UserCircleIcon, UsersIcon, ChevronDownIcon, TrophyIcon, DocumentTextIcon } from './icons';
+import { useToast } from '../contexts/ToastContext';
 
 interface DemoModeSwitcherProps {
-  adminUser: User;
-  subAdminUser?: User;
-  agents: Agent[];
-  impersonatedUserId: number | null;
-  onSwitchUser: (userId: number | null) => void;
+    adminUser: User;
+    subAdminUser?: User;
+    managerUser?: User;
+    underwriterUser?: User;
+    agents: Agent[];
+    impersonatedUserId: number | null;
+    onSwitchUser: (userId: number | null) => void;
 }
 
-const DemoModeSwitcher: React.FC<DemoModeSwitcherProps> = ({ adminUser, subAdminUser, agents, impersonatedUserId, onSwitchUser }) => {
-  const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState(false);
+const DemoModeSwitcher: React.FC<DemoModeSwitcherProps> = ({
+    adminUser,
+    subAdminUser,
+    managerUser,
+    underwriterUser,
+    agents,
+    impersonatedUserId,
+    onSwitchUser
+}) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const { addToast } = useToast();
 
-  const isActive = (userId: number | null) => {
-    return impersonatedUserId === userId;
-  };
+    const allUsers = useMemo(() => [adminUser, subAdminUser, managerUser, underwriterUser, ...agents].filter(Boolean), [adminUser, subAdminUser, managerUser, underwriterUser, agents]);
 
-  const impersonatedAgent = agents.find(a => a.id === impersonatedUserId);
-  const agentButtonText = impersonatedAgent ? impersonatedAgent.name.split(' ')[0] : 'Agents';
+    const currentUserInfo = useMemo(() => {
+        if (impersonatedUserId === null) return adminUser;
+        const user = allUsers.find(u => u.id === impersonatedUserId);
+        if (user) {
+            // Agent type doesn't have a role, so we add it for display
+            if (!('role' in user)) return { ...user, role: UserRole.AGENT };
+            return user as User;
+        }
+        return adminUser;
+    }, [impersonatedUserId, allUsers, adminUser]);
 
-  return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-lg">
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-2 flex items-center space-x-2 shadow-2xl border border-white/10">
-            <div className="flex items-center text-white font-bold px-3 shrink-0">
-                <EyeIcon className="w-5 h-5 mr-2 text-primary-400" />
-                <span className="hidden sm:inline">Demo View:</span>
+    const handleSwitchUser = useCallback((userId: number | null) => {
+        onSwitchUser(userId);
+        const user = allUsers.find(u => u.id === userId) || adminUser;
+        const role = 'role' in user ? (user as User).role : UserRole.AGENT;
+        addToast(`Switched to ${role} Mode`, `Now viewing as ${user.name}`, 'info');
+        window.location.hash = `#/dashboard?t=${Date.now()}`;
+        setIsExpanded(false);
+    }, [onSwitchUser, addToast, allUsers, adminUser]);
+
+    const handleExitDemo = useCallback(() => {
+        onSwitchUser(null);
+        addToast('Demo Mode Exited', 'Returned to administrator view', 'info');
+        window.location.hash = `#/dashboard?t=${Date.now()}`;
+        setIsExpanded(false);
+    }, [onSwitchUser, addToast]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (!(event.target as HTMLElement).closest('.demo-mode-switcher')) {
+                setIsExpanded(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    if (!isExpanded) {
+        return (
+            <button
+                onClick={() => setIsExpanded(true)}
+                className="fixed top-6 right-6 z-50 bg-white/80 backdrop-blur-lg text-primary-600 px-4 py-2 rounded-full shadow-premium-lg border border-white/50 hover:shadow-premium-glow transition-all duration-300 demo-mode-switcher flex items-center"
+            >
+                <EyeIcon className="w-5 h-5 mr-2" />
+                <span className="font-semibold">Demo Mode</span>
+            </button>
+        );
+    }
+
+    const RoleButton: React.FC<{ user: User | Agent; icon: React.ReactNode }> = ({ user, icon }) => {
+        const role = 'role' in user ? (user as User).role : UserRole.AGENT;
+        const userId = 'role' in user ? user.id : null;
+        if (role === UserRole.ADMIN && userId === null) {
+            // special case for admin
+        } else if (!user) {
+            return null;
+        }
+
+        return (
+             <button
+                onClick={() => handleSwitchUser(user.id)}
+                className={`w-full text-left p-3 rounded-xl border-2 transition-all duration-200 ${
+                    impersonatedUserId === user.id
+                        ? 'bg-primary-50 border-primary-500 text-primary-700 shadow-inner'
+                        : 'bg-white/50 border-slate-200/80 text-slate-700 hover:bg-slate-100/50 hover:border-slate-300'
+                }`}
+            >
+                <div className="font-semibold text-base flex items-center">{icon} {role.replace('_', ' ')}</div>
+            </button>
+        );
+    };
+
+    return (
+        <div className="fixed top-6 right-6 z-50 bg-white/80 backdrop-blur-2xl rounded-2xl shadow-premium-lg border border-white/50 p-6 w-80 demo-mode-switcher">
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-200/80">
+                <div>
+                    <h3 className="text-lg font-bold text-slate-800">Demo Mode</h3>
+                    <p className="text-sm text-slate-600">Switch between user roles</p>
+                </div>
+                <button onClick={() => setIsExpanded(false)} className="text-xs bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md hover:bg-slate-300 transition-colors font-medium shadow-sm">&times;</button>
+            </div>
+
+            <div className="mb-4 p-3 bg-slate-100/50 rounded-lg border border-slate-200/50">
+                <div className="text-sm font-medium text-slate-700">Currently Viewing:</div>
+                <div className="text-lg font-bold text-slate-900">{currentUserInfo?.name}</div>
+                <div className="text-xs text-slate-500 capitalize">{currentUserInfo?.role.replace('_', ' ')}</div>
+            </div>
+
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
+                <RoleButton user={adminUser} icon={<UserCircleIcon className="w-5 h-5 mr-2" />} />
+                {managerUser && <RoleButton user={managerUser} icon={<TrophyIcon className="w-5 h-5 mr-2" />} />}
+                {subAdminUser && <RoleButton user={subAdminUser} icon={<UsersIcon className="w-5 h-5 mr-2" />} />}
+                {underwriterUser && <RoleButton user={underwriterUser} icon={<DocumentTextIcon className="w-5 h-5 mr-2" />} />}
+                {agents.map((agent) => (
+                    <button
+                        key={agent.id}
+                        onClick={() => handleSwitchUser(agent.id)}
+                        className={`w-full text-left p-3 rounded-xl border-2 transition-all duration-200 ${
+                            impersonatedUserId === agent.id
+                                ? 'bg-primary-50 border-primary-500 text-primary-700 shadow-inner'
+                                : 'bg-white/50 border-slate-200/80 text-slate-700 hover:bg-slate-100/50 hover:border-slate-300'
+                        }`}
+                    >
+                        <div className="font-semibold text-sm flex items-center"><UserCircleIcon className="w-5 h-5 mr-2" /> {agent.name}</div>
+                    </button>
+                ))}
             </div>
             
             <button
-              onClick={() => onSwitchUser(null)}
-              className={`flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 w-full justify-center ${
-                isActive(null)
-                  ? 'bg-white text-primary-600 shadow-md'
-                  : 'text-white/70 hover:bg-white/20 hover:text-white'
-              }`}
+                onClick={handleExitDemo}
+                className="w-full mt-4 text-center text-xs bg-rose-100 text-rose-700 px-3 py-2 rounded-md hover:bg-rose-200 transition-colors font-medium shadow-sm"
             >
-              <UserCircleIcon className="w-5 h-5 mr-2" />
-              {adminUser.role}
+                Exit Demo Mode & Return to Admin
             </button>
-            
-            {subAdminUser && (
-              <button
-                onClick={() => onSwitchUser(subAdminUser.id)}
-                className={`flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 w-full justify-center ${
-                  isActive(subAdminUser.id)
-                    ? 'bg-white text-primary-600 shadow-md'
-                    : 'text-white/70 hover:bg-white/20 hover:text-white'
-                }`}
-              >
-                <UsersIcon className="w-5 h-5 mr-2" />
-                Sub-Admin
-              </button>
-            )}
-
-            <div className="relative w-full">
-              <button
-                onMouseEnter={() => setIsAgentDropdownOpen(true)}
-                onMouseLeave={() => setIsAgentDropdownOpen(false)}
-                className={`flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 w-full justify-center ${
-                  impersonatedAgent
-                    ? 'bg-white text-primary-600 shadow-md'
-                    : 'text-white/70 hover:bg-white/20 hover:text-white'
-                }`}
-              >
-                <UsersIcon className="w-5 h-5 mr-2" />
-                <span className="truncate">{agentButtonText}</span>
-                <ChevronDownIcon className={`w-4 h-4 ml-1 flex-shrink-0 transition-transform ${isAgentDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {isAgentDropdownOpen && (
-                <div 
-                  onMouseEnter={() => setIsAgentDropdownOpen(true)}
-                  onMouseLeave={() => setIsAgentDropdownOpen(false)}
-                  className="absolute top-full mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-10 py-1 max-h-60 overflow-y-auto"
-                >
-                  {agents.length > 0 ? agents.map(agent => (
-                    <a
-                      key={agent.id}
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        onSwitchUser(agent.id);
-                        setIsAgentDropdownOpen(false);
-                      }}
-                      className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                    >
-                      {agent.name}
-                    </a>
-                  )) : (
-                     <p className="px-4 py-2 text-sm text-slate-500">No active agents found.</p>
-                  )}
-                </div>
-              )}
-            </div>
         </div>
-    </div>
-  );
+    );
 };
 
 export default DemoModeSwitcher;

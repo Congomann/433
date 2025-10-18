@@ -25,6 +25,13 @@ export enum PolicyStatus {
   CANCELLED = 'Cancelled',
 }
 
+export enum PolicyUnderwritingStatus {
+  PENDING = 'Pending Review',
+  APPROVED = 'Approved',
+  REJECTED = 'Rejected',
+  MORE_INFO_REQUIRED = 'More Info Required',
+}
+
 export enum InteractionType {
   CALL = 'Call',
   EMAIL = 'Email',
@@ -36,6 +43,8 @@ export enum UserRole {
   ADMIN = 'Admin',
   SUB_ADMIN = 'Sub-Admin',
   AGENT = 'Agent',
+  MANAGER = 'Manager',
+  UNDERWRITING = 'Underwriting',
 }
 
 export enum AgentStatus {
@@ -62,6 +71,7 @@ export enum NotificationType {
   BROADCAST = 'broadcast',
   POLICY_RENEWAL = 'policy_renewal',
   CHARGEBACK_ISSUED = 'chargeback_issued',
+  UNDERWRITING_REVIEWED = 'underwriting_reviewed',
   GENERIC = 'generic',
 }
 
@@ -181,6 +191,8 @@ export interface Policy {
   endDate: string;
   status: PolicyStatus;
   carrier?: string;
+  underwritingStatus?: PolicyUnderwritingStatus;
+  underwritingNotes?: string;
 }
 
 export interface Interaction {

@@ -17,6 +17,8 @@ import LicensesView from './components/LicensesView';
 import TestimonialsManagement from './components/TestimonialsManagement';
 import AIAssistantView from './components/AIAssistantView';
 import AIOnboardingView from './components/AIOnboardingView';
+import ManagerPortal from './components/ManagerPortal';
+import UnderwritingPortal from './components/UnderwritingPortal';
 import AddClientModal from './components/AddClientModal';
 import AddEditPolicyModal from './components/AddEditPolicyModal';
 import AddEditAgentModal from './components/AddEditAgentModal';
@@ -34,6 +36,8 @@ import { setToken } from './services/authService';
 import EditClientModal from './components/AddReminderModal';
 import CalendarNoteModal from './components/CalendarNoteModal';
 import ChargebackView from './components/ChargebackView';
+import DemoModeSwitcher from './components/DemoModeSwitcher';
+import UnderwritingReviewModal from './components/UnderwritingReviewModal';
 
 
 // =============================================================================
@@ -86,157 +90,6 @@ class APICache {
 }
 
 export const apiCache = new APICache();
-
-// =============================================================================
-// DEMO MODE SWITCHER (Production-ready with real user switching)
-// =============================================================================
-
-interface DemoModeSwitcherProps {
-    adminUser: User;
-    subAdminUser?: User;
-    agents: Agent[];
-    impersonatedUserId: number | null;
-    onSwitchUser: (userId: number | null) => void;
-}
-
-const DemoModeSwitcher: React.FC<DemoModeSwitcherProps> = React.memo(({
-    adminUser,
-    subAdminUser,
-    agents,
-    impersonatedUserId,
-    onSwitchUser
-}) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const { addToast } = useToast();
-
-    const currentUserInfo = useMemo(() => {
-        if (impersonatedUserId === null) return adminUser;
-        if (subAdminUser && subAdminUser.id === impersonatedUserId) return subAdminUser;
-        const agent = agents.find(a => a.id === impersonatedUserId);
-        // FIX: The Agent type does not have a 'role' property. We add it here for display purposes.
-        // Agents always have the 'Agent' role.
-        if (agent) {
-            return { ...agent, role: UserRole.AGENT };
-        }
-    }, [impersonatedUserId, adminUser, subAdminUser, agents]);
-
-    const handleSwitchUser = useCallback((userId: number | null, role: UserRole, userName: string) => {
-        // Clear API cache when switching users to ensure fresh data
-        apiCache.clearAll();
-        
-        onSwitchUser(userId);
-        addToast(`Switched to ${role} Mode`, `Now viewing as ${userName}`, 'info');
-        
-        // Force navigation to dashboard with cache busting
-        window.location.hash = `#/dashboard?t=${Date.now()}`;
-    }, [onSwitchUser, addToast]);
-
-    const handleExitDemo = useCallback(() => {
-        apiCache.clearAll();
-        onSwitchUser(null);
-        addToast('Demo Mode Exited', 'Returned to administrator view', 'info');
-        window.location.hash = `#/dashboard?t=${Date.now()}`;
-    }, [onSwitchUser, addToast]);
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            if (!target.closest('.demo-mode-switcher')) {
-                setIsExpanded(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    if (!isExpanded) {
-        return (
-            <button
-                onClick={() => setIsExpanded(true)}
-                className="fixed top-6 right-6 z-50 bg-white/80 backdrop-blur-lg text-primary-600 px-4 py-2 rounded-full shadow-premium-lg border border-white/50 hover:shadow-premium-glow transition-all duration-300 demo-mode-switcher flex items-center"
-            >
-                <EyeIcon className="w-5 h-5 mr-2" /> 
-                <span className="font-semibold">Demo Mode</span>
-            </button>
-        );
-    }
-
-    return (
-        <div className="fixed top-6 right-6 z-50 bg-white/80 backdrop-blur-2xl rounded-2xl shadow-premium-lg border border-white/50 p-6 w-80 demo-mode-switcher">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-200/80">
-                <div>
-                    <h3 className="text-lg font-bold text-slate-800">Demo Mode</h3>
-                    <p className="text-sm text-slate-600">Switch between user roles</p>
-                </div>
-                <div className="flex space-x-2">
-                    <button
-                        onClick={handleExitDemo}
-                        className="text-xs bg-rose-100 text-rose-700 px-3 py-1.5 rounded-md hover:bg-rose-200 transition-colors font-medium shadow-sm"
-                    >
-                        Exit
-                    </button>
-                    <button
-                        onClick={() => setIsExpanded(false)}
-                        className="text-xs bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md hover:bg-slate-300 transition-colors font-medium shadow-sm"
-                    >
-                        &times;
-                    </button>
-                </div>
-            </div>
-
-            {/* Current User Info */}
-            <div className="mb-4 p-3 bg-slate-100/50 rounded-lg border border-slate-200/50">
-                <div className="text-sm font-medium text-slate-700">Currently Viewing:</div>
-                <div className="text-lg font-bold text-slate-900">{currentUserInfo?.name || 'Administrator'}</div>
-                <div className="text-xs text-slate-500 capitalize">{(currentUserInfo?.role || 'administrator').toLowerCase().replace('_', ' ')}</div>
-            </div>
-
-            {/* Role Selection */}
-            <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
-                <button
-                    onClick={() => handleSwitchUser(null, UserRole.ADMIN, 'Administrator')}
-                    className={`w-full text-left p-3 rounded-xl border-2 transition-all duration-200 ${
-                        impersonatedUserId === null
-                            ? 'bg-primary-50 border-primary-500 text-primary-700 shadow-inner'
-                            : 'bg-white/50 border-slate-200/80 text-slate-700 hover:bg-slate-100/50 hover:border-slate-300'
-                    }`}
-                >
-                    <div className="font-semibold text-base flex items-center"><UserCircleIcon className="w-5 h-5 mr-2" /> Administrator</div>
-                </button>
-                
-                {subAdminUser && (
-                    <button
-                        onClick={() => handleSwitchUser(subAdminUser.id, UserRole.SUB_ADMIN, subAdminUser.name)}
-                        className={`w-full text-left p-3 rounded-xl border-2 transition-all duration-200 ${
-                            impersonatedUserId === subAdminUser.id
-                                ? 'bg-primary-50 border-primary-500 text-primary-700 shadow-inner'
-                                : 'bg-white/50 border-slate-200/80 text-slate-700 hover:bg-slate-100/50 hover:border-slate-300'
-                        }`}
-                    >
-                        <div className="font-semibold text-base flex items-center"><UsersIcon className="w-5 h-5 mr-2" /> Sub-Admin</div>
-                    </button>
-                )}
-
-                {agents.map((agent) => (
-                    <button
-                        key={agent.id}
-                        onClick={() => handleSwitchUser(agent.id, UserRole.AGENT, agent.name)}
-                        className={`w-full text-left p-3 rounded-xl border-2 transition-all duration-200 ${
-                            impersonatedUserId === agent.id
-                                ? 'bg-primary-50 border-primary-500 text-primary-700 shadow-inner'
-                                : 'bg-white/50 border-slate-200/80 text-slate-700 hover:bg-slate-100/50 hover:border-slate-300'
-                        }`}
-                    >
-                        <div className="font-semibold text-sm flex items-center"><UserCircleIcon className="w-5 h-5 mr-2" /> {agent.name}</div>
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-});
 
 // =============================================================================
 // LOADING COMPONENT (Production-ready with graceful states)
@@ -311,6 +164,8 @@ const App: React.FC = () => {
     const [highlightedAgentId, setHighlightedAgentId] = useState<number | null>(null);
     const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
     const [selectedDateForNote, setSelectedDateForNote] = useState<Date | null>(null);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [policyToReview, setPolicyToReview] = useState<Policy | null>(null);
     
     // AI Assistant States
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -432,6 +287,10 @@ const App: React.FC = () => {
     // =========================================================================
     // EVENT HANDLERS (Production-ready with error handling)
     // =========================================================================
+    const handleOpenReviewModal = useCallback((policy: Policy) => {
+        setPolicyToReview(policy);
+        setIsReviewModalOpen(true);
+    }, []);
 
     const handleOpenEditClientModal = useCallback((client: Client) => {
         setClientToEdit(client);
@@ -627,6 +486,8 @@ const App: React.FC = () => {
                 case 'testimonials': return <TestimonialsManagement testimonials={displayData.testimonials} onUpdateTestimonialStatus={db.handlers.handleUpdateTestimonialStatus} onDeleteTestimonial={db.handlers.handleDeleteTestimonial} onNavigate={handleNavigate} />;
                 case 'ai-assistant': return <AIAssistantView currentUser={displayUser!} clients={db.clients} tasks={db.tasks} agents={db.agents} policies={db.policies} interactions={db.interactions} onSaveTask={onAICreateTask} onAssignLead={handleAIAssignLead} onNavigate={handleNavigate} />;
                 case 'ai-onboarding': return <AIOnboardingView leads={displayData.clients.filter(c => c.status === ClientStatus.LEAD)} onSave={db.handlers.handleUpdateClientAndAddInteractions} onNavigate={handleNavigate} />;
+                case 'manager-portal': return <ManagerPortal currentUser={displayUser!} agents={db.agents} clients={db.clients} policies={db.policies} onNavigate={handleNavigate} />;
+                case 'underwriting-portal': return <UnderwritingPortal policies={db.policies} clients={db.clients} agents={db.agents} onNavigate={handleNavigate} />;
 
                 default: return <div className="p-8">View '{view}' not found.</div>;
             }
@@ -670,6 +531,8 @@ const App: React.FC = () => {
                 <DemoModeSwitcher
                     adminUser={currentUser}
                     subAdminUser={db.users.find(u => u.role === UserRole.SUB_ADMIN)}
+                    managerUser={db.users.find(u => u.role === UserRole.MANAGER)}
+                    underwriterUser={db.users.find(u => u.role === UserRole.UNDERWRITING)}
                     agents={db.agents.filter(a => a.status === AgentStatus.ACTIVE)}
                     impersonatedUserId={impersonatedUserId}
                     onSwitchUser={setImpersonatedUserId}
@@ -697,6 +560,15 @@ const App: React.FC = () => {
                 users={displayData.users}
               />
             )}
+            <UnderwritingReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                policy={policyToReview}
+                onSave={(policyId, updates) => {
+                    db.handlers.handleSaveUnderwritingReview(policyId, updates);
+                    setIsReviewModalOpen(false);
+                }}
+            />
         </>
     );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon, AiSparklesIcon, UsersIcon, ShieldCheckIcon, BroadcastIcon, LogoutIcon, RocketLaunchIcon, ExclamationTriangleIcon } from './icons';
+import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon, AiSparklesIcon, UsersIcon, ShieldCheckIcon, BroadcastIcon, LogoutIcon, RocketLaunchIcon, ExclamationTriangleIcon, TrophyIcon, DocumentTextIcon } from './icons';
 import { User, UserRole, Notification, NotificationType } from '../types';
 
 interface SidebarProps {
@@ -24,6 +24,18 @@ const navConfig = {
     { id: 'tasks', label: 'Tasks', icon: <TasksIcon /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'commissions', label: 'Commissions', icon: <DollarSignIcon /> },
+    { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
+  ],
+  [UserRole.MANAGER]: [
+    { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
+    { id: 'manager-portal', label: 'Manager Portal', icon: <TrophyIcon /> },
+    { id: 'agents', label: 'Manage Agents', icon: <UsersIcon /> },
+    { id: 'clients', label: 'View Clients', icon: <ClientsIcon /> },
+    { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
+  ],
+  [UserRole.UNDERWRITING]: [
+    { id: 'underwriting-portal', label: 'Underwriting Queue', icon: <DocumentTextIcon /> },
+    { id: 'clients', label: 'View Clients', icon: <ClientsIcon /> },
     { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
   ],
   [UserRole.SUB_ADMIN]: [
@@ -106,6 +118,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
         return <ShieldCheckIcon className={`${iconClass} text-blue-500`} />;
       case NotificationType.CHARGEBACK_ISSUED:
         return <ExclamationTriangleIcon className={`${iconClass} text-rose-500`} />;
+      case NotificationType.UNDERWRITING_REVIEWED:
+        return <DocumentTextIcon className={`${iconClass} text-indigo-500`} />;
       default:
         return <BellIcon className={`${iconClass} text-slate-500`} />;
     }

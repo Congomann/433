@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as apiClient from '../services/apiClient';
-import { AppData, User, Agent, Client, Policy, Interaction, Task, Message, ClientStatus, UserRole, InteractionType, AgentStatus, License, Notification, CalendarNote, Testimonial, TestimonialStatus, CalendarEvent, Chargeback, ChargebackStatus } from '../types';
+import { AppData, User, Agent, Client, Policy, Interaction, Task, Message, ClientStatus, UserRole, InteractionType, AgentStatus, License, Notification, CalendarNote, Testimonial, TestimonialStatus, CalendarEvent, Chargeback, ChargebackStatus, PolicyUnderwritingStatus } from '../types';
 import { useToast } from '../contexts/ToastContext';
 
 export const useDatabase = (currentUser: User | null) => {
@@ -132,6 +132,10 @@ export const useDatabase = (currentUser: User | null) => {
         handleUpdatePolicy: (policyId: number, updates: Partial<Policy>) => handleApiCall(
             () => apiClient.put(`/api/policies/${policyId}`, updates),
             'Policy Updated', 'The policy has been successfully updated.'
+        ),
+        handleSaveUnderwritingReview: (policyId: number, updates: { underwritingStatus: PolicyUnderwritingStatus, underwritingNotes: string }) => handleApiCall(
+            () => apiClient.put(`/api/policies/${policyId}`, updates),
+            'Review Saved', 'The underwriting review has been saved.'
         ),
         handleAddLicense: (licenseData: Omit<License, 'id'>) => handleApiCall(
             () => apiClient.post('/api/licenses', licenseData),
