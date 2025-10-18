@@ -1,5 +1,5 @@
-import { MOCK_USERS, MOCK_AGENTS, MOCK_CLIENTS, MOCK_POLICIES, MOCK_INTERACTIONS, MOCK_TASKS, MOCK_MESSAGES, MOCK_LICENSES, MOCK_NOTIFICATIONS, MOCK_CALENDAR_NOTES, MOCK_TESTIMONIALS, MOCK_CALENDAR_EVENTS, MOCK_CHARGEBACKS } from '../constants';
-import { User, Agent, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, CalendarEvent, Chargeback } from '../types';
+import { MOCK_USERS, MOCK_AGENTS, MOCK_CLIENTS, MOCK_POLICIES, MOCK_INTERACTIONS, MOCK_TASKS, MOCK_MESSAGES, MOCK_LICENSES, MOCK_NOTIFICATIONS, MOCK_CALENDAR_NOTES, MOCK_TESTIMONIALS, MOCK_CALENDAR_EVENTS, MOCK_CHARGEBACKS, MOCK_AI_CALL_LOGS } from '../constants';
+import { User, Agent, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, CalendarEvent, Chargeback, AICallLog } from '../types';
 
 const DB_NAME = 'NewHollandCRM_DB';
 const DB_VERSION = 1;
@@ -18,6 +18,7 @@ const STORES = {
     testimonials: 'testimonials',
     calendarEvents: 'calendarEvents',
     chargebacks: 'chargebacks',
+    aiCallLogs: 'ai_calls',
 };
 
 let dbPromise: Promise<IDBDatabase>;
@@ -93,6 +94,10 @@ export const initDB = (): Promise<IDBDatabase> => {
                 const store = db.createObjectStore(STORES.chargebacks, { keyPath: 'id', autoIncrement: true });
                 seedFunctions.push(() => MOCK_CHARGEBACKS.forEach(item => store.add(item)));
             }
+            if (!db.objectStoreNames.contains(STORES.aiCallLogs)) {
+                const store = db.createObjectStore(STORES.aiCallLogs, { keyPath: 'id' });
+                seedFunctions.push(() => MOCK_AI_CALL_LOGS.forEach(item => store.add(item)));
+            }
 
             // After defining schema, run all seed functions within this transaction
             console.log('Database schema created. Seeding initial data...');
@@ -111,7 +116,7 @@ const getAll = <T>(storeName: string): Promise<T[]> => new Promise(async (resolv
     request.onerror = () => reject(request.error);
 });
 
-const getById = <T>(storeName: string, id: number): Promise<T | undefined> => new Promise(async (resolve, reject) => {
+const getById = <T>(storeName: string, id: number | string): Promise<T | undefined> => new Promise(async (resolve, reject) => {
     const db = await initDB();
     const tx = db.transaction(storeName, 'readonly');
     const request = tx.objectStore(storeName).get(id);
@@ -123,7 +128,11 @@ const add = <T>(storeName: string, item: any): Promise<T> => new Promise(async (
     const db = await initDB();
     const tx = db.transaction(storeName, 'readwrite');
     const request = tx.objectStore(storeName).add(item);
-    request.onsuccess = () => resolve({ ...item, id: request.result as number });
+    request.onsuccess = () => {
+        // For auto-incrementing keys, the result is the new key. For non-auto, it's undefined.
+        const id = request.result || item.id;
+        resolve({ ...item, id });
+    }
     request.onerror = () => reject(request.error);
 });
 
@@ -135,7 +144,7 @@ const put = <T>(storeName: string, item: T): Promise<T> => new Promise(async (re
     request.onerror = () => reject(request.error);
 });
 
-const remove = (storeName: string, id: number): Promise<boolean> => new Promise(async (resolve, reject) => {
+const remove = (storeName: string, id: number | string): Promise<boolean> => new Promise(async (resolve, reject) => {
     const db = await initDB();
     const tx = db.transaction(storeName, 'readwrite');
     const request = tx.objectStore(storeName).delete(id);
@@ -196,7 +205,7 @@ export const db = {
   getAll: getAll,
   getRecordById: getById,
   createRecord: add,
-  updateRecord: async <T extends {id: number}>(storeName: string, id: number, data: Partial<T>): Promise<T> => {
+  updateRecord: async <T extends {id: number | string}>(storeName: string, id: number | string, data: Partial<T>): Promise<T> => {
     const item = await getById<T>(storeName, id);
     if (!item) throw new Error('Record not found');
     return put<T>(storeName, { ...item, ...data });

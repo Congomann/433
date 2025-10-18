@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Client, Policy, Interaction, PolicyStatus, InteractionType, Agent, User, UserRole, ClientStatus, PolicyUnderwritingStatus } from '../types';
 import { summarizeNotes } from '../services/geminiService';
-import { AiSparklesIcon, PlusIcon, PencilIcon, EllipsisVerticalIcon, CalendarIcon, DollarSignIcon, ShieldIcon, DocumentTextIcon } from './icons';
+import { AiSparklesIcon, PlusIcon, PencilIcon, EllipsisVerticalIcon, CalendarIcon, DollarSignIcon, ShieldIcon, DocumentTextIcon, ChevronDownIcon } from './icons';
 
 interface ClientDetailProps {
   client: Client;
@@ -261,6 +261,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interacti
   const [activeTab, setActiveTab] = useState<'policies' | 'interactions' | 'notes'>('policies');
   const [summary, setSummary] = useState('');
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
 
   const noteInteractions = useMemo(() => interactions
     .filter(i => i.type === InteractionType.NOTE)
@@ -287,10 +288,28 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interacti
     setIsSummarizing(false);
   };
 
-  const handleConvertToClient = async () => {
-    await onUpdateStatus(client.id, ClientStatus.ACTIVE);
-    onBack();
+  const getStatusColor = (status: ClientStatus) => {
+    switch (status) {
+        case ClientStatus.ACTIVE: return { badge: 'bg-emerald-100 text-emerald-800 ring-emerald-200', dot: 'bg-emerald-500' };
+        case ClientStatus.LEAD: return { badge: 'bg-amber-100 text-amber-800 ring-amber-200', dot: 'bg-amber-500' };
+        case ClientStatus.INACTIVE: return { badge: 'bg-rose-100 text-rose-800 ring-rose-200', dot: 'bg-rose-500' };
+        default: return { badge: 'bg-slate-100 text-slate-800 ring-slate-200', dot: 'bg-slate-500' };
+    }
   };
+
+  const handleStatusChange = async (newStatus: ClientStatus) => {
+    if (newStatus !== client.status) {
+      await onUpdateStatus(client.id, newStatus);
+    }
+    setIsStatusDropdownOpen(false);
+  };
+
+  const canChangeStatus = useMemo(() => {
+    if (!currentUser) return false;
+    if (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUB_ADMIN) return true;
+    if (currentUser.role === UserRole.AGENT && currentUser.id === client.agentId) return true;
+    return false;
+  }, [currentUser, client.agentId]);
 
   const TabButton: React.FC<{tabId: 'policies'|'interactions'|'notes', label: string}> = ({ tabId, label }) => (
     <button
@@ -325,15 +344,33 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interacti
             <p className="text-slate-600">Client since {client.joinDate}</p>
           </div>
           <div className="mt-4 sm:mt-0 sm:ml-6 flex flex-col items-start sm:items-end space-y-2">
-            {currentUser.role === UserRole.AGENT && client.status === ClientStatus.LEAD && (
+            <div className="relative">
                 <button
-                    onClick={handleConvertToClient}
-                    className="bg-emerald-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-emerald-600 transition-colors"
+                    onClick={() => canChangeStatus && setIsStatusDropdownOpen(prev => !prev)}
+                    onBlur={() => setTimeout(() => setIsStatusDropdownOpen(false), 150)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold ring-1 ring-inset transition-colors ${getStatusColor(client.status).badge} ${canChangeStatus ? 'hover:opacity-80' : 'cursor-default'}`}
                 >
-                    Convert Lead to Client
+                    <div className={`w-2 h-2 rounded-full ${getStatusColor(client.status).dot}`}></div>
+                    <span>{client.status}</span>
+                    {canChangeStatus && <ChevronDownIcon className="w-4 h-4" />}
                 </button>
-            )}
-            
+                {isStatusDropdownOpen && canChangeStatus && (
+                    <div className="absolute right-0 top-full mt-2 w-40 bg-white/90 backdrop-blur-xl rounded-xl shadow-premium-lg ring-1 ring-black ring-opacity-5 z-20 modal-panel">
+                        <div className="py-1">
+                            {Object.values(ClientStatus).map(status => (
+                                <a
+                                    href="#"
+                                    key={status}
+                                    onClick={(e) => { e.preventDefault(); handleStatusChange(status); }}
+                                    className={`block px-4 py-2 text-sm ${client.status === status ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-100/50'}`}
+                                >
+                                    {status}
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
           </div>
         </div>
       </div>

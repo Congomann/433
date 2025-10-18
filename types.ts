@@ -264,6 +264,7 @@ export interface CalendarEvent {
   location: string;
   agentId: number;
   source?: 'internal' | 'google';
+  noteId?: number;
 }
 
 export interface Testimonial {
@@ -299,6 +300,15 @@ export interface EmailDraft {
   body: string;
 }
 
+export interface AICallLog {
+  id: string; // Firestore document ID
+  name: string;
+  phone: string;
+  intent: 'Interested' | 'Not Interested' | 'Callback Requested' | 'Unknown';
+  status: string; // e.g., "Quote provided for age 35 in TX", "Callback at 2024-08-01T14:00:00"
+  timestamp: string;
+}
+
 export interface AppData {
     users: User[];
     agents: Agent[];
@@ -313,4 +323,5 @@ export interface AppData {
     testimonials: Testimonial[];
     calendarEvents: CalendarEvent[];
     chargebacks: Chargeback[];
+    aiCallLogs: AICallLog[];
 }

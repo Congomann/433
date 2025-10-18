@@ -58,11 +58,11 @@ const AIAssistantView: React.FC<AIAssistantViewProps> = ({ currentUser, clients,
   }, [currentUser, clients, tasks, agents, policies, interactions]);
 
   const handleCreateTask = (clientId?: number, title?: string) => {
-    if (clientId && title) {
+    if (title) { // A title is required for a task
       setTaskToCreate({
         title,
         dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3 days from now
-        clientId: clientId,
+        clientId: clientId, // This can be undefined
       });
       setIsTaskModalOpen(true);
     }
@@ -90,13 +90,12 @@ const AIAssistantView: React.FC<AIAssistantViewProps> = ({ currentUser, clients,
     addToast('Lead Assigned', `Lead has been assigned to ${agentName}.`, 'success');
   };
 
-  const handleAction = (action: AISuggestionAction, index: number) => {
-    const client = clients.find(c => c.id === action.clientId);
-    const clientName = client ? `${client.firstName} ${client.lastName}` : 'the client';
+  const handleAction = (suggestion: AISuggestion, index: number) => {
+    const { action, title } = suggestion;
 
     switch (action.type) {
       case 'CREATE_TASK':
-        handleCreateTask(action.clientId, `Follow up with ${clientName}`);
+        handleCreateTask(action.clientId, title);
         break;
       case 'DRAFT_EMAIL':
         handleDraftEmail(action.clientId, action.prompt);
@@ -164,7 +163,7 @@ const AIAssistantView: React.FC<AIAssistantViewProps> = ({ currentUser, clients,
                             </div>
                         ) : (
                             <button
-                              onClick={() => handleAction(suggestion.action, index)}
+                              onClick={() => handleAction(suggestion, index)}
                               disabled={isDraftingEmail}
                               className="flex items-center justify-center bg-primary-600 text-white font-semibold px-4 h-10 rounded-md shadow-sm hover:bg-primary-500 text-sm button-press disabled:bg-slate-400"
                             >

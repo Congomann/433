@@ -6,7 +6,7 @@ import { NOTE_COLORS } from '../constants';
 interface CalendarNoteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (noteData: Omit<CalendarNote, 'id' | 'userId'> & { id?: number }) => void;
+  onSave: (noteData: Omit<CalendarNote, 'id'> & { id?: number }) => void;
   onDelete: (noteId: number) => void;
   selectedDate: Date;
   notesForDay: CalendarNote[];
@@ -30,13 +30,14 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
   const handleSave = () => {
     if (editingNote) {
       if (editingNote.text.trim() === '') return;
-      onSave({ id: editingNote.id, date: editingNote.date, text: editingNote.text, color: editingNote.color });
+      onSave({ ...editingNote });
     } else {
       if (newNoteText.trim() === '') return;
       onSave({
         date: selectedDate.toISOString().split('T')[0],
         text: newNoteText,
         color: selectedColor,
+        userId: currentUser.id,
       });
     }
     setNewNoteText('');

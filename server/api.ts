@@ -6,7 +6,7 @@ import * as messagesController from './controllers/messagesController';
 import * as dataController from './controllers/dataController';
 import * as auth from './auth';
 import { db } from './db';
-import { User, UserRole, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, PolicyStatus, Chargeback, ChargebackStatus, NotificationType, PolicyUnderwritingStatus } from '../types';
+import { User, UserRole, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, PolicyStatus, Chargeback, ChargebackStatus, NotificationType, PolicyUnderwritingStatus, CalendarEvent } from '../types';
 
 const SIMULATED_LATENCY = 0; // ms
 
@@ -69,11 +69,75 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
     if (path === '/api/notifications/mark-all-read' && method === 'PUT') {
         return await messagesController.markAllNotificationsRead(body.userId);
     }
+
+    if (path === '/api/calls/start' && method === 'POST') {
+        const { agentPhone, clientPhone } = body;
+        // SIMULATION: In a real app, this would trigger a Twilio/Vonage API call.
+        // The service would call the agent, and upon answer, bridge the call to the client.
+        console.log(`[SIMULATED CALL] Initiating call to agent at ${agentPhone}, then connecting to client at ${clientPhone}.`);
+        const callSid = `CA${Math.random().toString(36).substring(2, 18)}`;
+        return { callSid };
+    }
+
+    if (path === '/api/calls/end' && method === 'POST') {
+        const { callSid } = body;
+        // SIMULATION: This would trigger an API call to terminate the specified call leg.
+        console.log(`[SIMULATED CALL] Ending call with SID: ${callSid}`);
+        return { success: true };
+    }
     
     const resourceMatch = path.match(/^\/api\/([a-zA-Z0-9]+)(?:\/(\d+))?$/);
     if (resourceMatch) {
         const [, resource, idStr] = resourceMatch;
         const id = Number(idStr);
+
+        if (resource === 'calendarNotes') {
+            if (method === 'POST') {
+                const newNote = await db.createRecord<CalendarNote>(resource, body);
+                
+                const colorMap: Record<string, CalendarEvent['color']> = { 'Blue': 'blue', 'Green': 'green', 'Yellow': 'orange', 'Red': 'red', 'Purple': 'purple', 'Gray': 'blue' };
+
+                const eventData: Omit<CalendarEvent, 'id'> = {
+                    date: newNote.date,
+                    time: '12:00 PM',
+                    title: newNote.text,
+                    tag: 'note',
+                    color: colorMap[newNote.color] || 'blue',
+                    location: 'Note',
+                    agentId: newNote.userId,
+                    source: 'internal',
+                    noteId: newNote.id
+                };
+                await db.createRecord('calendarEvents', eventData);
+
+                return newNote;
+            }
+            if (method === 'PUT' && id) {
+                const updatedNote = await db.updateRecord<CalendarNote>(resource, id, body);
+
+                const allEvents = await db.getAll<CalendarEvent>('calendarEvents');
+                const correspondingEvent = allEvents.find(e => e.noteId === updatedNote.id);
+
+                if (correspondingEvent) {
+                    const colorMap: Record<string, CalendarEvent['color']> = { 'Blue': 'blue', 'Green': 'green', 'Yellow': 'orange', 'Red': 'red', 'Purple': 'purple', 'Gray': 'blue' };
+// FIX: Explicitly specify the generic type for `db.updateRecord` to resolve a TypeScript error where properties of CalendarEvent were not being recognized.
+                    await db.updateRecord<CalendarEvent>('calendarEvents', correspondingEvent.id, {
+                        date: updatedNote.date,
+                        title: updatedNote.text,
+                        color: colorMap[updatedNote.color] || 'blue',
+                    });
+                }
+                return updatedNote;
+            }
+            if (method === 'DELETE' && id) {
+                const allEvents = await db.getAll<CalendarEvent>('calendarEvents');
+                const correspondingEvent = allEvents.find(e => e.noteId === id);
+                if (correspondingEvent) {
+                    await db.deleteRecord('calendarEvents', correspondingEvent.id);
+                }
+                return await db.deleteRecord(resource, id);
+            }
+        }
         
         if (resource === 'messages') {
              if (method === 'POST') {

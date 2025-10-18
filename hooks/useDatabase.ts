@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as apiClient from '../services/apiClient';
-import { AppData, User, Agent, Client, Policy, Interaction, Task, Message, ClientStatus, UserRole, InteractionType, AgentStatus, License, Notification, CalendarNote, Testimonial, TestimonialStatus, CalendarEvent, Chargeback, ChargebackStatus, PolicyUnderwritingStatus } from '../types';
+import { AppData, User, Agent, Client, Policy, Interaction, Task, Message, ClientStatus, UserRole, InteractionType, AgentStatus, License, Notification, CalendarNote, Testimonial, TestimonialStatus, CalendarEvent, Chargeback, ChargebackStatus, PolicyUnderwritingStatus, AICallLog } from '../types';
 import { useToast } from '../contexts/ToastContext';
 
 export const useDatabase = (currentUser: User | null) => {
     const [data, setData] = useState<AppData>({
         users: [], agents: [], clients: [], policies: [], interactions: [],
         tasks: [], messages: [], licenses: [], notifications: [],
-        calendarNotes: [], testimonials: [], calendarEvents: [], chargebacks: []
+        calendarNotes: [], testimonials: [], calendarEvents: [], chargebacks: [],
+        aiCallLogs: []
     });
     const [isLoading, setIsLoading] = useState(true);
     const { addToast } = useToast();

@@ -103,6 +103,12 @@ export const ChevronRightIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' })
     </svg>
 );
 
+export const ClipboardDocumentIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 0 1-2.25 2.25H9.75A2.25 2.25 0 0 1 7.5 4.5v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+    </svg>
+);
+
 export const ClientsIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m-7.5-2.226A3 3 0 0018 15V6a3 3 0 00-3-3H9a3 3 0 00-3 3v9a3 3 0 003 3h1.346A3 3 0 0110.5 18.72v-2.226z" />
@@ -432,5 +438,17 @@ export const WrenchScrewdriverIcon: React.FC<IconProps> = ({ className = 'w-6 h-
 export const XCircleIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+export const YouTubeIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0C.488 3.411 0 5.846 0 12s.488 8.589 4.385 8.816c3.6.245 11.626.246 15.23 0C23.512 20.589 24 18.154 24 12s-.488-8.589-4.385-8.816zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+    </svg>
+);
+
+export const VimeoIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M23.974 6.428c-.28 2.03-2.62 6.1-7.01 12.2-4.21 5.8-8.04 8.7-11.49 8.7-2.29 0-4.11-2.03-5.46-6.09-1.28-3.88.58-6.19 3.55-6.94.8-.2 1.51-.15 2.14.15.63.3 1.02.82 1.17 1.57.26 1.18-.3 2.03-.97 2.53-.41.3-.82.46-1.22.46-.33 0-.66-.1-1-.29-.63-.3-1.07-.97-1.32-2-.12-.45-.15-.9-.1-1.35.15-1.51 1.1-2.95 2.86-4.32 2.3-1.82 4-2.73 5.1-2.73.97 0 1.91.48 2.83 1.44s1.38 2.35 1.38 4.18c0 1.29-.2 2.58-.6 3.88-1.42 4.45-2.91 6.67-4.46 6.67-.8 0-1.57-.85-2.31-2.55-1-2.28-1.5-4.56-1.5-6.84 0-2.06.3-3.66.9-4.8.6-1.14 1.5-1.71 2.7-1.71.8 0 1.51.27 2.14.8.46.38.83.89 1.1 1.51.53 1.21.8 2.97.8 5.28-.02 1.58-.31 3.02-.86 4.32-.47 1.05-1.03 1.57-1.67 1.57-.33 0-.63-.2-.9-.6-.27-.4-.4-1-.4-1.8 0-1.14.33-2.88 1-5.22.6-2.11.9-3.51.9-4.21 0-.41-.1-.72-.3-.93-.2-.21-.5-.31-.9-.31-.4 0-.83.2-1.3.61-.47.4-1.05 1.25-1.75 2.55-.7 1.3-1.29 2.98-1.77 5.03-.41 1.74-.62 3.03-.62 3.88 0 .6.13 1.1.4 1.51.26.4.6.6 1.01.6.6 0 1.2-.5 1.8-1.51.6-1 1.2-2.32 1.8-3.96.6-1.64 1.1-2.91 1.5-3.81.4-.9.6-1.55.6-1.95 0-.6-.2-1-.6-1.21-.4-.2-.9-.3-1.5-.3-1.1 0-2.1.48-3 1.44-.9 1-1.5 2.4-1.8 4.21-.3 1.81-.3 3.24 0 4.3.4 1.2 1.1 1.8 2.1 1.8 1.1 0 2.2-1 3.3-3s1.9-3.7 2.4-5.1c.3-.8.4-1.3.4-1.5z"/>
     </svg>
 );

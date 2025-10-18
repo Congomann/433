@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { AppData, User, UserRole, Agent, AgentStatus, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, ClientStatus, TestimonialStatus, EmailDraft, CalendarEvent, Chargeback, ChargebackStatus } from './types';
+import { AppData, User, UserRole, Agent, AgentStatus, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, ClientStatus, TestimonialStatus, EmailDraft, CalendarEvent, Chargeback, ChargebackStatus, AICallLog } from './types';
 import { useDatabase } from './hooks/useDatabase';
 import { useToast } from './contexts/ToastContext';
 import Sidebar from './components/Sidebar';
@@ -18,6 +18,7 @@ import TestimonialsManagement from './components/TestimonialsManagement';
 import AIAssistantView from './components/AIAssistantView';
 import AIOnboardingView from './components/AIOnboardingView';
 import AICallAssistantView from './components/AICallAssistantView';
+import AICallLogsView from './components/AICallLogsView';
 import ManagerPortal from './components/ManagerPortal';
 import UnderwritingPortal from './components/UnderwritingPortal';
 import OnboardingStepper from './components/onboarding/OnboardingStepper';
@@ -40,6 +41,8 @@ import CalendarNoteModal from './components/CalendarNoteModal';
 import ChargebackView from './components/ChargebackView';
 import DemoModeSwitcher from './components/DemoModeSwitcher';
 import UnderwritingReviewModal from './components/UnderwritingReviewModal';
+import CarrierEAppsView from './components/CarrierEAppsView';
+import TrainingView from './components/TrainingView';
 
 
 // =============================================================================
@@ -427,6 +430,7 @@ const App: React.FC = () => {
         const clientForDetail = view === 'client' && viewParam ? displayData.clients.find(c => c.id === Number(viewParam)) : null;
         const agentForClients = view === 'clients' && viewParam ? displayData.agents.find(a => a.id === Number(viewParam)) : null;
         const clientsForList = agentForClients ? displayData.clients.filter(c => c.agentId === agentForClients.id) : displayData.clients;
+        const currentAgent = displayData.agents.find(a => a.id === displayUser!.id);
 
         try {
             switch (view) {
@@ -438,13 +442,10 @@ const App: React.FC = () => {
                 case 'agent': {
                     const agentForProfile = viewParam ? displayData.agents.find(a => a.slug === viewParam) : null;
                     if (!agentForProfile) return <div className="p-8 text-center">Agent not found</div>;
-                    // FIX: Pass handleNavigate to AgentProfile
                     return <AgentProfile agent={agentForProfile} onAddLead={(leadData) => displayData.handlers.handleAddLeadFromProfile(leadData, agentForProfile.id)} currentUser={displayUser!} onMessageAgent={(agentId) => handleNavigate(`messages/${agentId}`)} onViewAgentClients={(agentId) => handleNavigate(`clients/${agentId}`)} onUpdateProfile={displayData.handlers.onUpdateAgentProfile} licenses={displayData.licenses} onAddLicense={displayData.handlers.handleAddLicense} onDeleteLicense={displayData.handlers.onDeleteLicense} testimonials={displayData.testimonials} onAddTestimonial={displayData.handlers.onAddTestimonial} onNavigate={handleNavigate} />;
                 }
                 case 'my-profile': {
-                    const currentAgent = displayData.agents.find(a => a.id === displayUser!.id);
                     if (!currentAgent) return <div className="p-8 text-center">Profile not available.</div>;
-                    // FIX: Pass handleNavigate to AgentProfile
                     return <AgentProfile agent={currentAgent} onAddLead={(leadData) => displayData.handlers.handleAddLeadFromProfile(leadData, currentAgent.id)} currentUser={displayUser!} onMessageAgent={(agentId) => handleNavigate(`messages/${agentId}`)} onViewAgentClients={(agentId) => handleNavigate(`clients/${agentId}`)} onUpdateProfile={displayData.handlers.onUpdateAgentProfile} licenses={displayData.licenses} onAddLicense={displayData.handlers.handleAddLicense} onDeleteLicense={displayData.handlers.onDeleteLicense} testimonials={displayData.testimonials} onAddTestimonial={displayData.handlers.onAddTestimonial} onNavigate={handleNavigate} />;
                 }
                 case 'leads': return <LeadDistribution leads={displayData.clients.filter(c => c.status === ClientStatus.LEAD)} onSelectLead={(id) => handleNavigate(`client/${id}`)} onCreateLead={handleOpenCreateLead} onEditLead={handleOpenEditLead} onDeleteLead={(id) => displayData.handlers.handleDeleteTask(id)} />;
@@ -453,14 +454,18 @@ const App: React.FC = () => {
                 case 'messages': return <MessagingView currentUser={displayUser!} users={displayData.users} messages={displayData.messages} onSendMessage={displayData.handlers.handleSendMessage} onEditMessage={displayData.handlers.handleEditMessage} onTrashMessage={displayData.handlers.handleTrashMessage} onRestoreMessage={displayData.handlers.handleRestoreMessage} onPermanentlyDeleteMessage={displayData.handlers.handlePermanentlyDeleteMessage} initialSelectedUserId={viewParam ? Number(viewParam) : undefined} onMarkConversationAsRead={displayData.handlers.handleMarkConversationAsRead} onOpenBroadcast={() => setIsBroadcastModalOpen(true)} onTyping={() => {}} typingStatus={{}} />;
                 case 'calendar': return <CalendarView currentUser={displayUser!} agents={displayData.agents} calendarEvents={displayData.calendarEvents} calendarNotes={displayData.calendarNotes} users={displayData.users} onOpenNoteModal={handleOpenNoteModal} />;
                 case 'licenses': {
-                    const currentAgent = displayData.agents.find(a => a.id === displayUser!.id);
                     if (!currentAgent) return <div className="p-8 text-center">Not an agent.</div>;
                     return <LicensesView agent={currentAgent} licenses={displayData.licenses} onAddLicense={displayData.handlers.handleAddLicense} onDeleteLicense={displayData.handlers.onDeleteLicense} />;
                 }
                 case 'testimonials': return <TestimonialsManagement testimonials={displayData.testimonials} onUpdateTestimonialStatus={displayData.handlers.handleUpdateTestimonialStatus} onDeleteTestimonial={displayData.handlers.handleDeleteTestimonial} onNavigate={handleNavigate} />;
                 case 'ai-assistant': return <AIAssistantView currentUser={displayUser!} clients={displayData.clients} tasks={displayData.tasks} agents={displayData.agents} policies={displayData.policies} interactions={displayData.interactions} onSaveTask={onAICreateTask} onAssignLead={handleAIAssignLead} onNavigate={handleNavigate} />;
                 case 'ai-onboarding': return <AIOnboardingView leads={displayData.clients.filter(c => c.status === ClientStatus.LEAD)} onSave={displayData.handlers.handleUpdateClientAndAddInteractions} onNavigate={handleNavigate} />;
-                case 'ai-call-assistant': return <AICallAssistantView clients={displayData.clients} onSaveInteraction={displayData.handlers.handleSaveInteraction} onNavigate={handleNavigate} />;
+                case 'ai-call-assistant': 
+                    if (!currentAgent) return <div className="p-8">Agent profile not found. Call assistant is unavailable.</div>;
+                    return <AICallAssistantView currentUser={displayUser!} agent={currentAgent} clients={displayData.clients} onSaveInteraction={displayData.handlers.handleSaveInteraction} onNavigate={handleNavigate} onUpdateClient={displayData.handlers.handleUpdateClient} onAddLead={handleOpenCreateLead} />;
+                case 'ai-call-logs': return <AICallLogsView aiCallLogs={displayData.aiCallLogs} />;
+                case 'carrier-e-apps': return <CarrierEAppsView clients={displayData.clients} onSavePolicy={displayData.handlers.handleSavePolicy} />;
+                case 'training': return <TrainingView />;
                 case 'manager-portal': return <ManagerPortal currentUser={displayUser!} agents={displayData.agents} clients={displayData.clients} policies={displayData.policies} onNavigate={handleNavigate} />;
                 case 'underwriting-portal': return <UnderwritingPortal policies={displayData.policies} clients={displayData.clients} agents={displayData.agents} onNavigate={handleNavigate} onReviewPolicy={handleOpenReviewModal} />;
 

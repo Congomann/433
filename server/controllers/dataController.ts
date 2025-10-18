@@ -1,6 +1,6 @@
 import { db } from '../db';
 // FIX: Added Chargeback to import list to support fetching chargeback data.
-import { User, UserRole, Policy, Client, Interaction, Task, License, Testimonial, Notification, PolicyStatus, NotificationType, CalendarEvent, Message, CalendarNote, Chargeback } from '../../types';
+import { User, UserRole, Policy, Client, Interaction, Task, License, Testimonial, Notification, PolicyStatus, NotificationType, CalendarEvent, Message, CalendarNote, Chargeback, AICallLog } from '../../types';
 
 const checkAndCreateRenewalNotifications = async (policies: Policy[], clients: Client[], notifications: Notification[]) => {
     const today = new Date();
@@ -50,7 +50,7 @@ export const getAllData = async (currentUser: User) => {
     // FIX: Added chargebacks to data fetching to ensure all app data is available.
     const [
         users, agents, clients, policies, interactions, tasks, messages,
-        licenses, calendarNotes, testimonials, initialNotifications, calendarEvents, chargebacks
+        licenses, calendarNotes, testimonials, initialNotifications, calendarEvents, chargebacks, aiCallLogs
     ] = await Promise.all([
         db.users.find(),
         db.agents.find(),
@@ -65,7 +65,8 @@ export const getAllData = async (currentUser: User) => {
         db.getAll<Testimonial>('testimonials'),
         db.getAll<Notification>('notifications'), // Fetch initial notifications
         db.getAll<CalendarEvent>('calendarEvents'),
-        db.getAll<Chargeback>('chargebacks')
+        db.getAll<Chargeback>('chargebacks'),
+        db.getAll<AICallLog>('ai_calls')
     ]);
 
     // Check for renewals and create notifications if necessary
@@ -83,7 +84,7 @@ export const getAllData = async (currentUser: User) => {
         users: sanitizedUsers,
         agents, clients, policies, interactions, tasks, messages,
         licenses, notifications: finalNotifications, calendarNotes, testimonials, calendarEvents,
-        chargebacks
+        chargebacks, aiCallLogs
     };
     
     // Filter data based on the current user's role

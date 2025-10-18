@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Agent, User, UserRole, License, Testimonial, TestimonialStatus } from '../types';
 import { CrmLogoIcon, LocationPinIcon, PhoneIcon, EnvelopeIcon, GlobeAltIcon, CalendarIcon, WhatsAppIcon, LinkedInIcon, FacebookIcon, MessageIcon, ClientsIcon, PencilIcon, InstagramIcon, TikTokIcon, TwitterIcon, SnapchatIcon, PlusIcon, InfoIcon, ShieldCheckIcon, CalendarDaysIcon, SunIcon, ArrowsUpDownIcon, ChartTrendingUpIcon, TruckIcon, CarIcon, WrenchScrewdriverIcon, HomeIcon, BuildingOfficeIcon, FireIcon, StethoscopeIcon, ShareIcon } from './icons';
+import AgentLicenses from './AgentLicenses';
 
 interface AgentProfileProps {
     agent: Agent;
@@ -62,6 +63,7 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
     const isAdminView = currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.SUB_ADMIN;
     const isOwner = currentUser?.id === agent.id;
 
+    const agentLicenses = licenses.filter(l => l.agentId === agent.id);
     const approvedTestimonials = testimonials.filter(t => t.agentId === agent.id && t.status === TestimonialStatus.APPROVED);
     const pendingTestimonials = testimonials.filter(t => t.agentId === agent.id && t.status === TestimonialStatus.PENDING);
 
@@ -268,6 +270,7 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
                     {/* Tab Navigation */}
                     <div className="mb-6 flex space-x-2 border-b border-slate-200 pb-2 overflow-x-auto">
                         <TabButton tabId="profile" label="About Me" activeTab={activeTab} setActiveTab={setActiveTab} />
+                        {isOwner && <TabButton tabId="licenses" label="Licenses & Credentials" activeTab={activeTab} setActiveTab={setActiveTab} />}
                         <TabButton tabId="contact" label="Reviews & Contact" activeTab={activeTab} setActiveTab={setActiveTab} />
                     </div>
 
@@ -291,6 +294,15 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
                                     </a>
                                 </div>
                             </div>
+                        )}
+
+                        {activeTab === 'licenses' && isOwner && (
+                            <AgentLicenses 
+                                agentId={agent.id}
+                                licenses={agentLicenses}
+                                onAddLicense={onAddLicense}
+                                onDeleteLicense={onDeleteLicense}
+                            />
                         )}
 
                         {activeTab === 'contact' && (

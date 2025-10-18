@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { User, Client, Task, Agent, Policy, UserRole, AISuggestion, EmailDraft, Interaction } from '../types';
+import { User, Client, Task, Agent, Policy, UserRole, AISuggestion, EmailDraft, Interaction, PolicyStatus, PolicyType, PolicyUnderwritingStatus } from '../types';
 
 // FIX: Per @google/genai guidelines, the API key must be obtained directly from the environment variable.
 // Fallbacks and warnings are removed as the key is assumed to be configured.
@@ -53,26 +53,54 @@ const getRoleSpecificPrompt = (currentUser: User, allData: { clients: Client[], 
     let dataPayload = {};
 
     switch(currentUser.role) {
-        case UserRole.AGENT:
+        case UserRole.AGENT: {
             const agentClients = allData.clients.filter(c => c.agentId === currentUser.id);
             const agentClientIds = new Set(agentClients.map(c => c.id));
-            const agentPolicies = allData.policies.filter(p => agentClientIds.has(p.clientId)).map(p => ({
+            const allAgentPolicies = allData.policies.filter(p => agentClientIds.has(p.clientId));
+            
+            const todayDate = new Date(today);
+            todayDate.setUTCHours(0, 0, 0, 0);
+
+            const expiringPolicies = allAgentPolicies
+                .filter(p => p.status === PolicyStatus.ACTIVE && p.endDate)
+                .map(p => {
+                    const endDate = new Date(p.endDate);
+                    if (isNaN(endDate.getTime())) return null;
+
+                    endDate.setUTCHours(0,0,0,0);
+                    
+                    const diffTime = endDate.getTime() - todayDate.getTime();
+                    const daysUntilExpiration = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    return {
+                        clientId: p.clientId,
+                        type: p.type as PolicyType,
+                        daysUntilExpiration,
+                    };
+                })
+                .filter((p): p is { clientId: number; type: PolicyType; daysUntilExpiration: number } => 
+                    p !== null && p.daysUntilExpiration >= 0 && p.daysUntilExpiration <= 45
+                );
+
+            const policies = allAgentPolicies.map(p => ({
                 clientId: p.clientId,
                 type: p.type,
                 status: p.status,
-                endDate: p.endDate
             }));
+
             const clientSummaryForPrompt = agentClients.map(c => {
                  const lastInteraction = allData.interactions.filter(i => i.clientId === c.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-                 const clientPolicyTypes = allData.policies.filter(p => p.clientId === c.id).map(p => p.type);
+                 const clientPolicyTypes = allAgentPolicies.filter(p => p.clientId === c.id).map(p => p.type);
                  return { id: c.id, name: `${c.firstName} ${c.lastName}`, status: c.status, joinDate: c.joinDate, lastContact: lastInteraction?.date, policies: clientPolicyTypes };
             });
 
             roleInstructions = `
                 You are an AI assistant for an insurance agent named ${currentUser.name}. Your goal is to provide actionable suggestions to help them manage their clients and policies effectively. Today's date is ${today}.
-                1.  **Policy Renewals:** Identify active policies that are expiring within the next 45 days. Suggest a "CREATE_TASK" to 'Initiate renewal process for [Client Name]'s [Policy Type] policy'. Set a high priority for policies expiring in under 15 days.
+                1.  **Policy Renewals:** The 'expiringPolicies' list contains policies that need renewal attention. For each policy in this list, generate a 'CREATE_TASK' suggestion.
+                    - The task's title should be: "Initiate renewal process for [Client Name]'s [Policy Type] policy". You must find the client's name from the 'clients' list using the 'clientId'.
+                    - The task's priority must be 'High' if 'daysUntilExpiration' is 15 or less. Otherwise, set the priority to 'Medium'.
                 2.  **Client Follow-ups:** Identify active clients who have not been contacted in over 90 days. Suggest a "CREATE_TASK" to 'Check in with [Client Name]'.
-                3.  **Cross-sell Opportunities:** Identify active clients who have exactly one policy. For these clients, generate a 'Low' priority suggestion with the "DRAFT_EMAIL" action.
+                3.  **Cross-sell Opportunities:** Using the 'policies' data, identify active clients who have exactly one policy. For these clients, generate a 'Low' priority suggestion with the "DRAFT_EMAIL" action.
                     - The action's prompt should be: 'Draft an email to [Client Name] to discuss adding a [Complementary Policy Type] policy to their portfolio.'
                     - To determine the [Complementary Policy Type]:
                         - If the client's only policy is 'Auto Insurance', suggest 'Home Insurance'.
@@ -80,8 +108,9 @@ const getRoleSpecificPrompt = (currentUser: User, allData: { clients: Client[], 
                         - If the client's only policy contains the word 'Life', suggest 'Auto Insurance'.
                 4.  **Lead Nurturing:** Identify leads that have not been contacted in over 7 days. Suggest a "CREATE_TASK" to 'Follow up with lead [Lead Name]'.
             `;
-            dataPayload = { clients: clientSummaryForPrompt, policies: agentPolicies };
+            dataPayload = { clients: clientSummaryForPrompt, policies, expiringPolicies };
             break;
+        }
         case UserRole.SUB_ADMIN:
             const unassignedLeads = allData.clients.filter(c => c.status === 'Lead' && !c.agentId).map(c => ({ id: c.id, name: `${c.firstName} ${c.lastName}`, joinDate: c.joinDate }));
             // Calculate a 'workload' score for each active agent to simplify the AI's task.
@@ -281,4 +310,45 @@ export const summarizeOnboardingConversation = async (transcript: string): Promi
         console.error("Error summarizing conversation:", error);
         throw new Error("Failed to generate a summary from the conversation.");
     }
+};
+
+const eAppSchema = {
+  type: Type.OBJECT,
+  properties: {
+    policyNumber: { type: Type.STRING, description: "The policy number or application ID." },
+    annualPremium: { type: Type.NUMBER, description: "The total annual premium amount, as a number." },
+    status: { 
+      type: Type.STRING, 
+      enum: Object.values(PolicyUnderwritingStatus),
+      description: "The final status of the application." 
+    },
+  },
+  required: ["policyNumber", "annualPremium", "status"],
+};
+
+export const analyzeEAppConfirmation = async (confirmationText: string): Promise<{policyNumber: string; annualPremium: number; status: PolicyUnderwritingStatus}> => {
+  try {
+    const prompt = `Analyze the following insurance application confirmation text. Extract the policy number (or application ID), the total annual premium amount, and the final status of the application (e.g., Approved, Pending Review, etc.). The text is unstructured, so find the most relevant pieces of information. If a numeric value isn't present for premium, return null.
+
+    Confirmation Text:
+    ---
+    ${confirmationText}
+    ---
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: eAppSchema,
+      },
+    });
+
+    const jsonText = response.text.trim();
+    return JSON.parse(jsonText);
+  } catch (error) {
+    console.error("Error analyzing e-app confirmation:", error);
+    throw new Error("Could not analyze the provided text. Please ensure it contains policy information and try again.");
+  }
 };
