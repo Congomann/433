@@ -1,0 +1,8 @@
+{
+  "name": "Copy of Copy of Copy of New Holland Financial Group",
+  "description": "A web-based CRM for New Holland Financial Group, including Admin, Sub-Admin, and Agent portals to manage leads, clients, and policies.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
