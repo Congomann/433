@@ -139,23 +139,30 @@
       button:hover:not(:disabled), [role="button"]:hover:not(:disabled), .button-hover:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04); }
       button:active:not(:disabled), .button-press:active:not(:disabled) { transform: translateY(0px) scale(0.98); box-shadow: none; transition-duration: 100ms; }
       
-      /* --- Enhanced input focus state --- */
-      input:focus, select:focus, textarea:focus { 
-        background-color: #1C2A3C; /* secondary color */
-        color: #ffffff;
-        border-color: #38c9ff;
-        box-shadow: 0 0 0 3px rgba(56, 201, 255, 0.25);
-        outline: none;
+      /* --- Enhanced input state --- */
+      /* This style is applied by default to prevent color changing on blur */
+      input, select, textarea { 
+        background-color: #1C2A3C !important;
+        color: #ffffff !important;
+      }
+      
+      input::placeholder, 
+      textarea::placeholder {
+        color: #94a3b8 !important;
       }
 
-      input:focus::placeholder, 
-      textarea:focus::placeholder {
-        color: #94a3b8; /* slate-400 */
+      /* Invert select arrow on dark background */
+      select {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
       }
-
-      /* Invert select arrow on focus */
-      select:focus {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      
+      /* Apply glow on focus for accessibility */
+      input:focus, select:focus, textarea:focus {
+        border-color: #38c9ff !important;
+        box-shadow: 0 0 0 3px rgba(56, 201, 255, 0.25) !important;
+        outline: none !important;
       }
 
       /* Custom scrollbar for a modern look */

@@ -15,6 +15,8 @@ interface AgentProfileProps {
     testimonials: Testimonial[];
     onAddTestimonial: (testimonialData: Omit<Testimonial, 'id' | 'status' | 'submissionDate'>) => void;
     isEmbedded?: boolean;
+    // FIX: Add onNavigate to the props interface
+    onNavigate: (view: string) => void;
 }
 
 const InfoLine: React.FC<{icon: React.ReactNode; children: React.ReactNode}> = ({ icon, children }) => (
@@ -47,7 +49,7 @@ const TabButton: React.FC<{ tabId: string; label: string; activeTab: string; set
 );
 
 
-const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUser, onMessageAgent, onViewAgentClients, onUpdateProfile, licenses, onAddLicense, onDeleteLicense, testimonials, onAddTestimonial, isEmbedded = false }) => {
+const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUser, onMessageAgent, onViewAgentClients, onUpdateProfile, licenses, onAddLicense, onDeleteLicense, testimonials, onAddTestimonial, isEmbedded = false, onNavigate }) => {
     const [contactForm, setContactForm] = useState({ firstName: '', lastName: '', email: '', phone: '', message: ''});
     const [testimonialForm, setTestimonialForm] = useState({ author: '', quote: '' });
     const [isEditing, setIsEditing] = useState(false);
@@ -61,7 +63,8 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
     const isOwner = currentUser?.id === agent.id;
 
     const approvedTestimonials = testimonials.filter(t => t.agentId === agent.id && t.status === TestimonialStatus.APPROVED);
-    
+    const pendingTestimonials = testimonials.filter(t => t.agentId === agent.id && t.status === TestimonialStatus.PENDING);
+
     const handleShare = async (event: React.MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
         if (isSharing) return;
@@ -295,22 +298,37 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
                                 <div className="bg-white rounded-lg border border-slate-200 p-6 sm:p-8">
                                     <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4">⭐ What My Clients Say</h2>
                                     <div className="space-y-6">
-                                    {approvedTestimonials.map((t) => (
+                                    {approvedTestimonials.length > 0 ? approvedTestimonials.map((t) => (
                                         <div key={t.id} className="border-l-4 border-primary-500 pl-4">
                                             <p className="text-slate-600 italic">"{t.quote}"</p>
                                             <p className="text-right font-semibold text-slate-800 mt-2">&ndash; {t.author}</p>
                                         </div>
-                                    ))}
+                                    )) : <p className="text-slate-500">No approved testimonials yet.</p>}
                                     </div>
                                 </div>
 
+                                {isOwner && pendingTestimonials.length > 0 && (
+                                    <div className="bg-white rounded-lg border border-slate-200 p-6 sm:p-8">
+                                        <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4">📝 Pending Testimonials</h2>
+                                        <p className="text-sm text-slate-500 mb-6">These testimonials are awaiting admin approval. You can manage all testimonials from the <button onClick={() => onNavigate('testimonials')} className="font-semibold text-primary-600 hover:underline">Testimonials</button> section.</p>
+                                        <div className="space-y-4">
+                                        {pendingTestimonials.map((t) => (
+                                            <div key={t.id} className="border-l-4 border-amber-400 pl-4 bg-amber-50/50 p-4 rounded-r-lg">
+                                                <p className="text-slate-600 italic">"{t.quote}"</p>
+                                                <p className="text-right font-semibold text-slate-800 mt-2">&ndash; {t.author}</p>
+                                            </div>
+                                        ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="bg-white rounded-lg border border-slate-200 p-6 sm:p-8">
-                                    <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4">Share Your Experience</h2>
+                                    <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4">{isOwner ? "Add a New Testimonial" : "Share Your Experience"}</h2>
                                     <form onSubmit={handleTestimonialSubmit}>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                            <input type="text" name="author" placeholder="Your Name (e.g., John D.)" value={testimonialForm.author} onChange={handleTestimonialFormChange} className="w-full px-4 py-2 border border-slate-300 rounded-md" required />
+                                            <input type="text" name="author" placeholder={isOwner ? "Client's Name (e.g., John D.)" : "Your Name (e.g., John D.)"} value={testimonialForm.author} onChange={handleTestimonialFormChange} className="w-full px-4 py-2 border border-slate-300 rounded-md" required />
                                         </div>
-                                        <textarea name="quote" placeholder="Your experience with me..." value={testimonialForm.quote} onChange={handleTestimonialFormChange} rows={4} className="w-full px-4 py-2 border border-slate-300 rounded-md mb-4" required></textarea>
+                                        <textarea name="quote" placeholder={isOwner ? "Client's testimonial quote..." : "Your experience with me..."} value={testimonialForm.quote} onChange={handleTestimonialFormChange} rows={4} className="w-full px-4 py-2 border border-slate-300 rounded-md mb-4" required></textarea>
                                         <button type="submit" className="w-full sm:w-auto flex items-center justify-center bg-primary-600 text-white font-bold px-6 py-3 rounded-md shadow-sm hover:bg-primary-700 transition-transform hover:scale-105">Submit Testimonial</button>
                                     </form>
                                 </div>
