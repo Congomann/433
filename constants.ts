@@ -39,6 +39,7 @@ const BASE_MOCK_AGENTS: Agent[] = [
         calendarLink: 'https://calendly.com/newholland-kara',
         status: AgentStatus.ACTIVE,
         joinDate: '2024-07-24',
+        onboardingStep: 5,
         socials: {
             whatsapp: 'https://wa.me/12145551234',
             linkedin: 'https://linkedin.com/in/karathrace',
@@ -66,6 +67,7 @@ const BASE_MOCK_AGENTS: Agent[] = [
         calendarLink: 'https://calendly.com/newholland-alex',
         status: AgentStatus.ACTIVE,
         joinDate: '2024-07-23',
+        onboardingStep: 5,
         socials: {
             whatsapp: '',
             linkedin: 'https://linkedin.com/in/alexray',
@@ -93,6 +95,7 @@ const BASE_MOCK_AGENTS: Agent[] = [
         calendarLink: 'https://calendly.com/newholland-laura',
         status: AgentStatus.PENDING,
         joinDate: '',
+        onboardingStep: 0,
         socials: {},
     },
     { 
@@ -112,6 +115,7 @@ const BASE_MOCK_AGENTS: Agent[] = [
         calendarLink: 'https://calendly.com/newholland-william',
         status: AgentStatus.ACTIVE,
         joinDate: '2024-07-23',
+        onboardingStep: 5,
         socials: {
             linkedin: 'https://linkedin.com/in/williamadama',
         },
@@ -133,6 +137,7 @@ const BASE_MOCK_AGENTS: Agent[] = [
         calendarLink: 'https://calendly.com/newholland-karl',
         status: AgentStatus.ACTIVE,
         joinDate: '2024-07-23',
+        onboardingStep: 5,
         socials: {
             twitter: 'https://twitter.com/karlagathon',
         },

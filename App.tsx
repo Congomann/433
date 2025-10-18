@@ -20,6 +20,7 @@ import AIOnboardingView from './components/AIOnboardingView';
 import AICallAssistantView from './components/AICallAssistantView';
 import ManagerPortal from './components/ManagerPortal';
 import UnderwritingPortal from './components/UnderwritingPortal';
+import OnboardingStepper from './components/onboarding/OnboardingStepper';
 import AddClientModal from './components/AddClientModal';
 import AddEditPolicyModal from './components/AddEditPolicyModal';
 import AddEditAgentModal from './components/AddEditAgentModal';
@@ -210,6 +211,9 @@ const App: React.FC = () => {
         const impersonatedUser = displayData.users.find(u => u.id === impersonatedUserId);
         return impersonatedUser || currentUser;
     }, [impersonatedUserId, currentUser, displayData.users]);
+
+    const agentProfile = useMemo(() => displayUser ? displayData.agents.find(a => a.id === displayUser.id) : null, [displayUser, displayData.agents]);
+
 
     // =========================================================================
     // ROUTING & NAVIGATION (Production-ready with error boundaries)
@@ -473,6 +477,14 @@ const App: React.FC = () => {
 
     if (agentStatus === AgentStatus.PENDING) {
         return <PendingApproval onLogout={handleLogout} />;
+    }
+
+    if (displayUser.role === UserRole.AGENT && agentProfile && (agentProfile.onboardingStep ?? 0) < 5) {
+        return <OnboardingStepper 
+                    agent={agentProfile} 
+                    onUpdateAgentStep={(step) => displayData.handlers.onUpdateAgentProfile({ ...agentProfile, onboardingStep: step })} 
+                    currentUser={displayUser}
+                />;
     }
     
     return (

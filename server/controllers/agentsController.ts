@@ -11,7 +11,8 @@ export const approveAgent = async (agentId: number, { role }: { role: UserRole }
 
     const updatedAgent = await db.agents.update(agentId, { 
         status: AgentStatus.ACTIVE, 
-        joinDate: new Date().toISOString().split('T')[0] 
+        joinDate: new Date().toISOString().split('T')[0],
+        onboardingStep: 1,
     });
     
     let title = 'Insurance Agent';

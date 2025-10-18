@@ -126,6 +126,7 @@ export interface Agent {
     avatar: string;
     status: AgentStatus;
     joinDate: string;
+    onboardingStep?: number;
     socials: {
         whatsapp?: string;
         linkedin?: string;
