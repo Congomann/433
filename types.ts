@@ -262,6 +262,7 @@ export interface CalendarEvent {
   color: 'blue' | 'purple' | 'green' | 'orange' | 'red';
   location: string;
   agentId: number;
+  source?: 'internal' | 'google';
 }
 
 export interface Testimonial {

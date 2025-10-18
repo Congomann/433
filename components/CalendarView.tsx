@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { CalendarEvent, User, Agent, CalendarNote } from '../types';
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, ClockIcon, LocationPinIcon, TagIcon } from './icons';
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, ClockIcon, LocationPinIcon, GoogleIcon } from './icons';
+import { useToast } from '../contexts/ToastContext';
+import { googleCalendarService } from '../services/googleCalendarService';
 
 interface CalendarViewProps {
   currentUser: User;
@@ -14,6 +16,45 @@ interface CalendarViewProps {
 const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calendarEvents, calendarNotes, users, onOpenNoteModal }) => {
   const [currentDate, setCurrentDate] = useState(new Date('2025-10-01T12:00:00Z'));
   const [selectedDate, setSelectedDate] = useState(new Date('2025-10-16T12:00:00Z'));
+  const { addToast } = useToast();
+  
+  // Google Calendar Integration State
+  const [isGoogleConnected, setIsGoogleConnected] = useState(googleCalendarService.getIsSignedIn());
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [googleEvents, setGoogleEvents] = useState<CalendarEvent[]>([]);
+
+  // Fetch Google events on initial load if connected
+  useEffect(() => {
+    if (isGoogleConnected) {
+      setIsSyncing(true);
+      googleCalendarService.listEvents()
+        .then(setGoogleEvents)
+        .catch(err => addToast('Sync Error', 'Could not fetch Google Calendar events.', 'error'))
+        .finally(() => setIsSyncing(false));
+    }
+  }, [isGoogleConnected, addToast]);
+  
+  const handleGoogleConnect = async () => {
+    setIsSyncing(true);
+    try {
+        await googleCalendarService.signIn();
+        setIsGoogleConnected(true);
+        const events = await googleCalendarService.listEvents();
+        setGoogleEvents(events);
+        addToast('Success', 'Google Calendar connected and events synced.', 'success');
+    } catch (error) {
+        addToast('Connection Failed', 'Could not connect to Google Calendar.', 'error');
+    } finally {
+        setIsSyncing(false);
+    }
+  };
+
+  const handleGoogleDisconnect = async () => {
+      await googleCalendarService.signOut();
+      setIsGoogleConnected(false);
+      setGoogleEvents([]);
+      addToast('Disconnected', 'Google Calendar has been disconnected.', 'info');
+  };
 
   const noteColorMapping: Record<string, { bg: string, text: string }> = {
     'Red': { bg: 'bg-rose-500', text: 'text-white' },
@@ -26,7 +67,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
-    calendarEvents.forEach(event => {
+    const allEvents = [
+        ...calendarEvents.map(e => ({...e, source: e.source || 'internal' as const})),
+        ...googleEvents.map(e => ({...e, source: 'google' as const}))
+    ];
+
+    allEvents.forEach(event => {
       const dateKey = event.date;
       if (!map.has(dateKey)) {
         map.set(dateKey, []);
@@ -34,7 +80,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
       map.get(dateKey)!.push(event);
     });
     return map;
-  }, [calendarEvents]);
+  }, [calendarEvents, googleEvents]);
   
    const notesByDate = useMemo(() => {
     const map = new Map<string, CalendarNote[]>();
@@ -139,10 +185,20 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
           <h1 className="text-4xl font-extrabold text-slate-800">Calendar</h1>
           <p className="text-slate-500 mt-1">Schedule and manage appointments</p>
         </div>
-        <button className="flex items-center justify-center bg-primary-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 button-press">
-          <PlusIcon className="w-5 h-5 mr-2" />
-          New Event
-        </button>
+        <div className="flex items-center gap-2">
+            {isGoogleConnected ? (
+                <button onClick={handleGoogleDisconnect} className="flex items-center justify-center bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm border border-slate-300 hover:bg-slate-100 button-press">
+                    <GoogleIcon className="w-5 h-5 mr-2" /> Disconnect
+                </button>
+            ) : (
+                <button onClick={handleGoogleConnect} disabled={isSyncing} className="flex items-center justify-center bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm border border-slate-300 hover:bg-slate-100 disabled:opacity-50 button-press">
+                    <GoogleIcon className="w-5 h-5 mr-2" /> {isSyncing ? 'Connecting...' : 'Connect Google Calendar'}
+                </button>
+            )}
+            <button className="flex items-center justify-center bg-primary-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 button-press">
+                <PlusIcon className="w-5 h-5 mr-2" /> New Event
+            </button>
+        </div>
       </div>
       
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 min-h-0">
@@ -176,18 +232,23 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
                 {selectedDayEvents.length > 0 ? selectedDayEvents.map(event => {
                     const colors = eventCardColors[event.color];
                     const agent = agentMap[event.agentId];
+                    const isGoogleEvent = event.source === 'google';
+
                     return (
                         <div key={event.id} className="flex items-start space-x-3 card-enter">
-                            {agent ? (
+                            {agent && !isGoogleEvent ? (
                                 <img src={agent.avatar} alt={agent.name} className="w-10 h-10 rounded-full flex-shrink-0" />
                             ) : (
                                 <div className="w-10 h-10 rounded-full bg-slate-200 flex-shrink-0" />
                             )}
-                            <div className={`flex-1 p-3 rounded-xl border-l-4 ${colors.bg} ${colors.border}`}>
+                            <div className={`flex-1 p-3 rounded-xl border-l-4 ${colors.bg} ${colors.border} ${isGoogleEvent ? 'ring-2 ring-blue-200' : ''}`}>
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <h3 className="font-bold text-slate-800 leading-tight">{event.title}</h3>
-                                        {agent && <p className="text-sm font-medium text-slate-500 -mt-0.5">With: {agent.name}</p>}
+                                        <h3 className="font-bold text-slate-800 leading-tight flex items-center">
+                                            {isGoogleEvent && <GoogleIcon className="w-4 h-4 mr-2" />}
+                                            {event.title}
+                                        </h3>
+                                        {agent && !isGoogleEvent && <p className="text-sm font-medium text-slate-500 -mt-0.5">With: {agent.name}</p>}
                                     </div>
                                     <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${colors.border} ${colors.text} bg-white flex-shrink-0 ml-2`}>{event.tag}</span>
                                 </div>
