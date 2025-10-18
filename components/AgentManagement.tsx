@@ -280,19 +280,19 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
 
   const handleDeactivate = useCallback((agentId: number) => {
     if (window.confirm("Are you sure you want to deactivate this agent's account? Their access will be revoked, and they will be moved to the Inactive list. This action is reversible.")) {
-        onDeactivateAgent(agentId).then(() => setActiveTab('inactive'));
+        onDeactivateAgent(agentId);
     }
   }, [onDeactivateAgent]);
 
   const handleReactivate = useCallback((agentId: number) => {
     if (window.confirm('Reactivate this agent’s account? They will regain access immediately.')) {
-        onReactivateAgent(agentId).then(() => setActiveTab('active'));
+        onReactivateAgent(agentId);
     }
   }, [onReactivateAgent]);
 
   const handleReject = useCallback((agentId: number) => {
     if (window.confirm('Rejecting this application will move the agent to the Inactive list. Continue?')) {
-        onRejectAgent(agentId).then(() => setActiveTab('inactive'));
+        onRejectAgent(agentId);
     }
   }, [onRejectAgent]);
 
@@ -348,12 +348,11 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
             onClose={() => setAgentToApprove(null)}
             agentName={agentToApprove?.name || ''}
             currentRole={userForApproval?.role as UserRole.AGENT | UserRole.SUB_ADMIN || UserRole.AGENT}
-            onConfirm={(newRole) => {
+            onConfirm={async (newRole) => {
                 if (agentToApprove) {
-                    onApproveAgent(agentToApprove.id, newRole).then(() => {
-                        setAgentToApprove(null);
-                        setActiveTab('active');
-                    });
+                    await onApproveAgent(agentToApprove.id, newRole);
+                    setAgentToApprove(null);
+                    // The data will refresh and agent will move, no need to switch tab.
                 }
             }}
         />
