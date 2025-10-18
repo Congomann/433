@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Agent, AgentStatus, User, UserRole, Client, Policy } from '../types';
 import { PlusIcon } from './icons';
 import ApproveAgentModal from './ApproveAgentModal';
@@ -36,7 +36,7 @@ const TabButton: React.FC<{tabId: AgentTableTab, label: string, count: number, a
     </button>
 );
 
-const ActionButton: React.FC<{ onClick: () => Promise<void> | void, text: string, color: 'emerald' | 'amber' | 'rose' | 'slate', ariaLabel: string, title?: string }> = ({ onClick, text, color, ariaLabel, title }) => {
+const ActionButton: React.FC<{ onClick: () => void, text: string, color: 'emerald' | 'amber' | 'rose' | 'slate', ariaLabel: string, title?: string }> = ({ onClick, text, color, ariaLabel, title }) => {
     const colorClasses = {
         emerald: 'text-emerald-600 hover:text-emerald-800',
         amber: 'text-amber-600 hover:text-amber-800',
@@ -55,7 +55,7 @@ const ActionButton: React.FC<{ onClick: () => Promise<void> | void, text: string
     );
 };
 
-const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[], highlightedAgentId: number | null, onNavigate: (view: string) => void, onEditAgent: (agent: Agent) => void, onDeactivateAgent: (agentId: number) => Promise<any>, setActiveTab: (tab: AgentTableTab) => void, canManage: boolean}> = ({ agents, highlightedAgentId, onNavigate, onEditAgent, onDeactivateAgent, setActiveTab, canManage }) => (
+const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[], highlightedAgentId: number | null, onNavigate: (view: string) => void, onEditAgent: (agent: Agent) => void, onDeactivate: (agentId: number) => void, canManage: boolean}> = ({ agents, highlightedAgentId, onNavigate, onEditAgent, onDeactivate, canManage }) => (
     <div className="bg-white rounded-t-lg border-x border-t border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -101,12 +101,7 @@ const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[],
                                 title="Edit agent profile"
                             />
                             <ActionButton
-                                onClick={async () => {
-                                    if (window.confirm("Are you sure you want to deactivate this agent's account? Their access will be revoked, and they will be moved to the Inactive list. This action is reversible.")) {
-                                        await onDeactivateAgent(agent.id);
-                                        setActiveTab('inactive');
-                                    }
-                                }}
+                                onClick={() => onDeactivate(agent.id)}
                                 text="Deactivate"
                                 color="amber"
                                 ariaLabel={`Deactivate ${agent.name}`}
@@ -122,7 +117,7 @@ const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[],
       </div>
 );
 
-const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number | null, onReactivateAgent: (agentId: number) => Promise<any>, onDeleteAgent: (agentId: number) => Promise<any>, setActiveTab: (tab: AgentTableTab) => void, canManage: boolean}> = ({ agents, highlightedAgentId, onReactivateAgent, onDeleteAgent, setActiveTab, canManage }) => (
+const InactiveAgentsTable: React.FC<{agents: Agent[], onReactivate: (agentId: number) => void, onDelete: (agentId: number) => void, canManage: boolean}> = ({ agents, onReactivate, onDelete, canManage }) => (
     <div className="bg-white rounded-t-lg border-x border-t border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -135,7 +130,7 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number
           </thead>
           <tbody className="bg-white divide-y divide-slate-200">
             {agents.map((agent) => (
-              <tr key={agent.id} className={`transition-colors duration-1000 ${highlightedAgentId === agent.id ? 'bg-rose-50' : 'hover:bg-slate-50'} row-enter`}>
+              <tr key={agent.id} className="hover:bg-slate-50 row-enter">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <img className="h-10 w-10 rounded-full" src={agent.avatar} alt={`${agent.name}'s avatar`} />
@@ -148,23 +143,14 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-4">
                             <ActionButton
-                                onClick={async () => {
-                                    if (window.confirm('Reactivate this agent’s account? They will regain access immediately.')) {
-                                        await onReactivateAgent(agent.id);
-                                        setActiveTab('active');
-                                    }
-                                }}
+                                onClick={() => onReactivate(agent.id)}
                                 text="Reactivate"
                                 color="emerald"
                                 ariaLabel={`Reactivate ${agent.name}`}
                                 title="Reactivate agent"
                             />
                              <ActionButton
-                                onClick={async () => {
-                                    if (window.confirm("PERMANENT ACTION: This will delete the agent's profile, user login, and unassign all their clients. This should only be done if the agent has left New Holland Financial Group or committed a policy violation. This action CANNOT be undone. Are you sure you want to proceed?")) {
-                                        await onDeleteAgent(agent.id);
-                                    }
-                                }}
+                                onClick={() => onDelete(agent.id)}
                                 text="Delete Permanently"
                                 color="rose"
                                 ariaLabel={`Permanently Delete ${agent.name}`}
@@ -180,7 +166,7 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number
       </div>
 );
 
-const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent) => void, onRejectAgent: (agentId: number) => Promise<any>, setAgentToApprove: (agent: Agent) => void, setActiveTab: (tab: AgentTableTab) => void, canManage: boolean}> = ({ agents, onEditAgent, onRejectAgent, setAgentToApprove, setActiveTab, canManage }) => (
+const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent) => void, onReject: (agentId: number) => void, setAgentToApprove: (agent: Agent) => void, canManage: boolean}> = ({ agents, onEditAgent, onReject, setAgentToApprove, canManage }) => (
     <div className="bg-white rounded-t-lg border-x border-t border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -220,12 +206,7 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
                                 title="Edit agent application"
                             />
                             <ActionButton
-                                onClick={async () => {
-                                    if (window.confirm('Rejecting this application will move the agent to the Inactive list. Continue?')) {
-                                        await onRejectAgent(agent.id);
-                                        setActiveTab('inactive');
-                                    }
-                                }}
+                                onClick={() => onReject(agent.id)}
                                 text="Reject"
                                 color="rose"
                                 ariaLabel={`Reject ${agent.name}`}
@@ -262,7 +243,6 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
     });
   }, [agents, clients, policies]);
 
-  // Group agents by status in a single pass for efficiency and clarity.
   const { activeAgents, pendingAgents, inactiveAgents } = useMemo(() => {
     const grouped = {
       [AgentStatus.ACTIVE]: [] as (Agent & { totalPremium: number })[],
@@ -298,6 +278,29 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
     }
   }, [activeTab, activeAgents, pendingAgents, inactiveAgents]);
 
+  const handleDeactivate = useCallback((agentId: number) => {
+    if (window.confirm("Are you sure you want to deactivate this agent's account? Their access will be revoked, and they will be moved to the Inactive list. This action is reversible.")) {
+        onDeactivateAgent(agentId).then(() => setActiveTab('inactive'));
+    }
+  }, [onDeactivateAgent]);
+
+  const handleReactivate = useCallback((agentId: number) => {
+    if (window.confirm('Reactivate this agent’s account? They will regain access immediately.')) {
+        onReactivateAgent(agentId).then(() => setActiveTab('active'));
+    }
+  }, [onReactivateAgent]);
+
+  const handleReject = useCallback((agentId: number) => {
+    if (window.confirm('Rejecting this application will move the agent to the Inactive list. Continue?')) {
+        onRejectAgent(agentId).then(() => setActiveTab('inactive'));
+    }
+  }, [onRejectAgent]);
+
+  const handleDelete = useCallback((agentId: number) => {
+    if (window.confirm("PERMANENT ACTION: This will delete the agent's profile, user login, and unassign all their clients. This should only be done if the agent has left New Holland Financial Group or committed a policy violation. This action CANNOT be undone. Are you sure you want to proceed?")) {
+        onDeleteAgent(agentId);
+    }
+  }, [onDeleteAgent]);
 
   return (
     <div className="p-8">
@@ -322,19 +325,19 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
       <div className="mt-4">
         {activeTab === 'active' && (
             <div className="rounded-lg shadow-sm border border-slate-200">
-                <ActiveAgentsTable agents={paginatedActive} highlightedAgentId={highlightedAgentId} onNavigate={onNavigate} onEditAgent={onEditAgent} onDeactivateAgent={onDeactivateAgent} setActiveTab={setActiveTab} canManage={canManage} />
+                <ActiveAgentsTable agents={paginatedActive} highlightedAgentId={highlightedAgentId} onNavigate={onNavigate} onEditAgent={onEditAgent} onDeactivate={handleDeactivate} canManage={canManage} />
                 <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             </div>
         )}
         {activeTab === 'pending' && (
             <div className="rounded-lg shadow-sm border border-slate-200">
-                <PendingAgentsTable agents={paginatedPending} onEditAgent={onEditAgent} onRejectAgent={onRejectAgent} setAgentToApprove={setAgentToApprove} setActiveTab={setActiveTab} canManage={canManage} />
+                <PendingAgentsTable agents={paginatedPending} onEditAgent={onEditAgent} onReject={handleReject} setAgentToApprove={setAgentToApprove} canManage={canManage} />
                 <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             </div>
         )}
         {activeTab === 'inactive' && (
             <div className="rounded-lg shadow-sm border border-slate-200">
-                <InactiveAgentsTable agents={paginatedInactive} highlightedAgentId={highlightedAgentId} onReactivateAgent={onReactivateAgent} onDeleteAgent={onDeleteAgent} setActiveTab={setActiveTab} canManage={canManage} />
+                <InactiveAgentsTable agents={paginatedInactive} onReactivate={handleReactivate} onDelete={handleDelete} canManage={canManage} />
                 <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             </div>
         )}
@@ -345,11 +348,12 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
             onClose={() => setAgentToApprove(null)}
             agentName={agentToApprove?.name || ''}
             currentRole={userForApproval?.role as UserRole.AGENT | UserRole.SUB_ADMIN || UserRole.AGENT}
-            onConfirm={async (newRole) => {
+            onConfirm={(newRole) => {
                 if (agentToApprove) {
-                    await onApproveAgent(agentToApprove.id, newRole);
-                    setAgentToApprove(null);
-                    setActiveTab('active');
+                    onApproveAgent(agentToApprove.id, newRole).then(() => {
+                        setAgentToApprove(null);
+                        setActiveTab('active');
+                    });
                 }
             }}
         />

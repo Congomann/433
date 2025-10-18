@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Client, Policy, Interaction, PolicyStatus, InteractionType, Agent, User, UserRole, ClientStatus } from '../types';
+import { Client, Policy, Interaction, PolicyStatus, InteractionType, Agent, User, UserRole, ClientStatus, PolicyUnderwritingStatus } from '../types';
 import { summarizeNotes } from '../services/geminiService';
 import { AiSparklesIcon, PlusIcon, PencilIcon, EllipsisVerticalIcon, CalendarIcon, DollarSignIcon, ShieldIcon, DocumentTextIcon } from './icons';
 
@@ -161,6 +161,18 @@ const AddNoteForm: React.FC<{
   );
 };
 
+const getUnderwritingStatusBadge = (status: PolicyUnderwritingStatus | undefined) => {
+    if (!status) return null;
+    const styles = {
+        [PolicyUnderwritingStatus.PENDING]: 'bg-amber-100 text-amber-800',
+        [PolicyUnderwritingStatus.APPROVED]: 'bg-emerald-100 text-emerald-800',
+        [PolicyUnderwritingStatus.REJECTED]: 'bg-rose-100 text-rose-800',
+        [PolicyUnderwritingStatus.MORE_INFO_REQUIRED]: 'bg-sky-100 text-sky-800',
+    };
+    const style = styles[status] || 'bg-slate-100 text-slate-800';
+    return <span className={`text-xs font-semibold px-2 py-1 rounded-full ${style}`}>{status}</span>;
+};
+
 
 const PolicyCard: React.FC<{ policy: Policy; onEdit: (policy: Policy) => void; onUpdatePolicy: (policyId: number, updates: Partial<Policy>) => void; currentUser: User; onReview: (policy: Policy) => void; }> = ({ policy, onEdit, onUpdatePolicy, currentUser, onReview }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -213,7 +225,10 @@ const PolicyCard: React.FC<{ policy: Policy; onEdit: (policy: Policy) => void; o
                     <p className="text-sm text-slate-600 mt-1">Carrier: {policy.carrier || 'N/A'}</p>
                     <p className="text-sm text-slate-600 mt-1">Policy #: {policy.policyNumber}</p>
                 </div>
-                <span className="text-xs font-semibold bg-slate-200 text-slate-700 px-2 py-1 rounded-full">{policy.status}</span>
+                <div className="flex flex-col items-end gap-y-2">
+                    <span className="text-xs font-semibold bg-slate-200 text-slate-700 px-2 py-1 rounded-full">{policy.status}</span>
+                    {getUnderwritingStatusBadge(policy.underwritingStatus)}
+                </div>
             </div>
             <div className="flex justify-between items-baseline mt-4">
                 <div>
