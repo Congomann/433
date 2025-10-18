@@ -15,11 +15,11 @@ interface AgentManagementProps {
   onNavigate: (view: string) => void;
   onAddAgent: () => void;
   onEditAgent: (agent: Agent) => void;
-  onApproveAgent: (agentId: number, newRole: UserRole) => void;
-  onDeactivateAgent: (agentId: number) => void;
-  onReactivateAgent: (agentId: number) => void;
-  onRejectAgent: (agentId: number) => void;
-  onDeleteAgent: (agentId: number) => void;
+  onApproveAgent: (agentId: number, newRole: UserRole) => Promise<any>;
+  onDeactivateAgent: (agentId: number) => Promise<any>;
+  onReactivateAgent: (agentId: number) => Promise<any>;
+  onRejectAgent: (agentId: number) => Promise<any>;
+  onDeleteAgent: (agentId: number) => Promise<any>;
   highlightedAgentId: number | null;
 }
 
@@ -55,7 +55,18 @@ const ActionButton: React.FC<{ onClick: () => void, text: string, color: 'emeral
     );
 };
 
-const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[], highlightedAgentId: number | null, onNavigate: (view: string) => void, onEditAgent: (agent: Agent) => void, onDeactivateAgent: (agentId: number) => void, canManage: boolean}> = ({ agents, highlightedAgentId, onNavigate, onEditAgent, onDeactivateAgent, canManage }) => (
+const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, users, clients, policies, onNavigate, onAddAgent, onEditAgent, onApproveAgent, onDeactivateAgent, onReactivateAgent, onRejectAgent, onDeleteAgent, highlightedAgentId }) => {
+  const [activeTab, setActiveTab] = useState<AgentTableTab>('active');
+  const [agentToApprove, setAgentToApprove] = useState<Agent | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
+
+  const canManage = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER;
+
+  const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[], highlightedAgentId: number | null, onNavigate: (view: string) => void, onEditAgent: (agent: Agent) => void, onDeactivateAgent: (agentId: number) => Promise<any>, canManage: boolean}> = ({ agents, highlightedAgentId, onNavigate, onEditAgent, onDeactivateAgent, canManage }) => (
     <div className="bg-white rounded-t-lg border-x border-t border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -101,9 +112,10 @@ const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[],
                                 title="Edit agent profile"
                             />
                             <ActionButton
-                                onClick={() => {
+                                onClick={async () => {
                                     if (window.confirm("Are you sure you want to deactivate this agent's account? Their access will be revoked, and they will be moved to the Inactive list. This action is reversible.")) {
-                                        onDeactivateAgent(agent.id);
+                                        await onDeactivateAgent(agent.id);
+                                        setActiveTab('inactive');
                                     }
                                 }}
                                 text="Deactivate"
@@ -119,9 +131,9 @@ const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[],
           </tbody>
         </table>
       </div>
-);
+  );
 
-const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number | null, onReactivateAgent: (agentId: number) => void, onDeleteAgent: (agentId: number) => void, canManage: boolean}> = ({ agents, highlightedAgentId, onReactivateAgent, onDeleteAgent, canManage }) => (
+  const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number | null, onReactivateAgent: (agentId: number) => Promise<any>, onDeleteAgent: (agentId: number) => Promise<any>, canManage: boolean}> = ({ agents, highlightedAgentId, onReactivateAgent, onDeleteAgent, canManage }) => (
     <div className="bg-white rounded-t-lg border-x border-t border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -147,9 +159,10 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-4">
                             <ActionButton
-                                onClick={() => {
+                                onClick={async () => {
                                     if (window.confirm('Reactivate this agent’s account? They will regain access immediately.')) {
-                                        onReactivateAgent(agent.id);
+                                        await onReactivateAgent(agent.id);
+                                        setActiveTab('active');
                                     }
                                 }}
                                 text="Reactivate"
@@ -158,9 +171,9 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number
                                 title="Reactivate agent"
                             />
                              <ActionButton
-                                onClick={() => {
+                                onClick={async () => {
                                     if (window.confirm("PERMANENT ACTION: This will delete the agent's profile, user login, and unassign all their clients. This should only be done if the agent has left New Holland Financial Group or committed a policy violation. This action CANNOT be undone. Are you sure you want to proceed?")) {
-                                        onDeleteAgent(agent.id);
+                                        await onDeleteAgent(agent.id);
                                     }
                                 }}
                                 text="Delete Permanently"
@@ -176,9 +189,9 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number
           </tbody>
         </table>
       </div>
-);
+  );
 
-const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent) => void, onRejectAgent: (agentId: number) => void, setAgentToApprove: (agent: Agent) => void, canManage: boolean}> = ({ agents, onEditAgent, onRejectAgent, setAgentToApprove, canManage }) => (
+  const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent) => void, onRejectAgent: (agentId: number) => Promise<any>, setAgentToApprove: (agent: Agent) => void, canManage: boolean}> = ({ agents, onEditAgent, onRejectAgent, setAgentToApprove, canManage }) => (
     <div className="bg-white rounded-t-lg border-x border-t border-slate-200 overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -218,9 +231,10 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
                                 title="Edit agent application"
                             />
                             <ActionButton
-                                onClick={() => {
+                                onClick={async () => {
                                     if (window.confirm('Rejecting this application will move the agent to the Inactive list. Continue?')) {
-                                        onRejectAgent(agent.id);
+                                        await onRejectAgent(agent.id);
+                                        setActiveTab('inactive');
                                     }
                                 }}
                                 text="Reject"
@@ -236,19 +250,8 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
           </tbody>
         </table>
       </div>
-);
+  );
 
-
-const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, users, clients, policies, onNavigate, onAddAgent, onEditAgent, onApproveAgent, onDeactivateAgent, onReactivateAgent, onRejectAgent, onDeleteAgent, highlightedAgentId }) => {
-  const [activeTab, setActiveTab] = useState<AgentTableTab>('active');
-  const [agentToApprove, setAgentToApprove] = useState<Agent | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab]);
-
-  const canManage = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER;
 
   const agentPerformanceData = useMemo(() => {
     return agents.map(agent => {
@@ -319,19 +322,19 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
       <div className="mt-4">
         {activeTab === 'active' && (
             <div className="rounded-lg shadow-sm border border-slate-200">
-                <ActiveAgentsTable agents={paginatedActive} highlightedAgentId={highlightedAgentId} onNavigate={onNavigate} onEditAgent={onEditAgent} onDeactivateAgent={(id) => {onDeactivateAgent(id); setActiveTab('inactive');}} canManage={canManage} />
+                <ActiveAgentsTable agents={paginatedActive} highlightedAgentId={highlightedAgentId} onNavigate={onNavigate} onEditAgent={onEditAgent} onDeactivateAgent={onDeactivateAgent} canManage={canManage} />
                 <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             </div>
         )}
         {activeTab === 'pending' && (
             <div className="rounded-lg shadow-sm border border-slate-200">
-                <PendingAgentsTable agents={paginatedPending} onEditAgent={onEditAgent} onRejectAgent={(id) => {onRejectAgent(id); setActiveTab('inactive');}} setAgentToApprove={setAgentToApprove} canManage={canManage} />
+                <PendingAgentsTable agents={paginatedPending} onEditAgent={onEditAgent} onRejectAgent={onRejectAgent} setAgentToApprove={setAgentToApprove} canManage={canManage} />
                 <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             </div>
         )}
         {activeTab === 'inactive' && (
             <div className="rounded-lg shadow-sm border border-slate-200">
-                <InactiveAgentsTable agents={paginatedInactive} highlightedAgentId={highlightedAgentId} onReactivateAgent={(id) => {onReactivateAgent(id); setActiveTab('active');}} onDeleteAgent={onDeleteAgent} canManage={canManage} />
+                <InactiveAgentsTable agents={paginatedInactive} highlightedAgentId={highlightedAgentId} onReactivateAgent={onReactivateAgent} onDeleteAgent={onDeleteAgent} canManage={canManage} />
                 <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             </div>
         )}
@@ -342,9 +345,9 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
             onClose={() => setAgentToApprove(null)}
             agentName={agentToApprove?.name || ''}
             currentRole={userForApproval?.role as UserRole.AGENT | UserRole.SUB_ADMIN || UserRole.AGENT}
-            onConfirm={(newRole) => {
+            onConfirm={async (newRole) => {
                 if (agentToApprove) {
-                    onApproveAgent(agentToApprove.id, newRole);
+                    await onApproveAgent(agentToApprove.id, newRole);
                     setAgentToApprove(null);
                     setActiveTab('active');
                 }
