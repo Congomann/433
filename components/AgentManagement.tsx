@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Agent, AgentStatus, User, UserRole, Client, Policy } from '../types';
-import { PlusIcon, PencilIcon, TrashIcon } from './icons';
+import { PlusIcon } from './icons';
 import ApproveAgentModal from './ApproveAgentModal';
 import Pagination from './Pagination';
 
@@ -93,9 +93,13 @@ const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[],
                 {canManage && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                        <div className="flex items-center space-x-4">
-                            <button onClick={() => onEditAgent(agent)} className="text-slate-500 hover:text-primary-600 transition-colors p-1" aria-label={`Edit ${agent.name}`} title={`Edit ${agent.name}`}>
-                                <PencilIcon />
-                            </button>
+                            <ActionButton
+                                onClick={() => onEditAgent(agent)}
+                                text="Edit Profile"
+                                color="slate"
+                                ariaLabel={`Edit ${agent.name}`}
+                                title="Edit agent profile"
+                            />
                             <ActionButton
                                 onClick={() => {
                                     if (window.confirm("Are you sure you want to deactivate this agent's account? Their access will be revoked, and they will be moved to the Inactive list. This action is reversible.")) {
@@ -206,9 +210,13 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
                                 ariaLabel={`Approve ${agent.name}`}
                                 title="Approve application"
                             />
-                            <button onClick={() => onEditAgent(agent)} className="text-slate-500 hover:text-primary-600 transition-colors p-1" aria-label={`Edit ${agent.name}`} title={`Edit ${agent.name}`}>
-                                <PencilIcon />
-                            </button>
+                            <ActionButton
+                                onClick={() => onEditAgent(agent)}
+                                text="Edit"
+                                color="slate"
+                                ariaLabel={`Edit ${agent.name}`}
+                                title="Edit agent application"
+                            />
                             <ActionButton
                                 onClick={() => {
                                     if (window.confirm('Rejecting this application will move the agent to the Inactive list. Continue?')) {
