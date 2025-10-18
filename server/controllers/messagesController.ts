@@ -99,16 +99,16 @@ export const permanentlyDeleteMessage = async (currentUser: User, messageId: num
     return { success };
 };
 
-export const broadcastMessage = async (adminUser: User, { text }: { text: string }) => {
-    if (adminUser.role !== UserRole.ADMIN) {
-        throw { status: 403, message: 'Only administrators can broadcast messages.' };
+export const broadcastMessage = async (currentUser: User, { text }: { text: string }) => {
+    if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
+        throw { status: 403, message: 'Only administrators and managers can broadcast messages.' };
     }
 
     const allUsers = await db.users.find();
     const allAgents = await db.agents.find();
 
     const activeUsers = allUsers.filter(
-        u => u.id !== adminUser.id && (u.role === UserRole.AGENT || u.role === UserRole.SUB_ADMIN)
+        u => u.id !== currentUser.id && (u.role === UserRole.AGENT || u.role === UserRole.SUB_ADMIN)
     );
     const activeAgentIds = new Set(allAgents.filter(a => a.status === AgentStatus.ACTIVE).map(a => a.id));
 
@@ -118,7 +118,7 @@ export const broadcastMessage = async (adminUser: User, { text }: { text: string
 
     for (const recipient of recipients) {
         const newMessage = await db.createRecord('messages', {
-            senderId: adminUser.id,
+            senderId: currentUser.id,
             receiverId: recipient.id,
             text: text,
             timestamp: new Date().toISOString(),
@@ -130,10 +130,10 @@ export const broadcastMessage = async (adminUser: User, { text }: { text: string
         await db.createRecord('notifications', {
             userId: recipient.id,
             type: NotificationType.BROADCAST,
-            message: `New broadcast message from ${adminUser.name}.`,
+            message: `New broadcast message from ${currentUser.name}.`,
             timestamp: new Date().toISOString(),
             isRead: false,
-            link: `messages/${adminUser.id}`
+            link: `messages/${currentUser.id}`
         });
 
         createdMessages.push(newMessage as any);

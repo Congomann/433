@@ -254,7 +254,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, clients, policies, tasks, a
                         <YAxis tick={{ fill: '#64748b' }} />
                         <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(5px)', borderRadius: '0.75rem', borderColor: '#e0e7ff' }}/>
                         <Legend />
-                        <Bar dataKey="premium" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="premium" fill="#6366f1" radius={[4, 4, 0, 0]} isAnimationActive={true} />
                     </BarChart>
                 </ChartContainer>
                 <ChartContainer title="Policies by Type" className="lg:col-span-2" style={{ animationDelay: '0.7s' }}>
@@ -268,6 +268,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, clients, policies, tasks, a
                             fill="#8884d8" 
                             dataKey="value"
                             nameKey="name"
+                            isAnimationActive={true}
                             label={({ name, percent }) => `${name} ${((+(percent || 0)) * 100).toFixed(0)}%`}
                             labelStyle={{ fill: '#475569', fontSize: '12px' }}
                         >
@@ -316,6 +317,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, clients, policies, tasks, a
                                 fill="#8884d8" 
                                 dataKey="value" 
                                 nameKey="name" 
+                                isAnimationActive={true}
                                 label={({ name, percent }) => `${name} ${((+(percent || 0)) * 100).toFixed(0)}%`}
                                 labelStyle={{ fill: '#475569', fontSize: '12px' }}
                             >

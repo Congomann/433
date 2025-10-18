@@ -76,7 +76,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, change, icon, s
   };
 
   return (
-    <div className="bg-white/70 backdrop-blur-lg p-7 rounded-2xl border border-white/50 shadow-premium hover:shadow-premium-lg hover:-translate-y-1 transition-all card-enter" style={style}>
+    <div className="bg-white/70 backdrop-blur-lg p-7 rounded-2xl border border-white/50 shadow-premium hover:shadow-premium-glow hover:-translate-y-1 transition-all card-enter" style={style}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-slate-500 font-medium">{title}</p>

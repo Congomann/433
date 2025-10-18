@@ -115,10 +115,13 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onTog
         <div className={`p-4 rounded-2xl border shadow-premium flex items-center justify-between transition-all duration-300 group ${dueDateInfo.containerClasses}`}>
             <div className="flex items-center cursor-pointer" onClick={() => onToggleTask(task.id)}>
                 <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200 ${task.completed ? 'bg-primary-600 border-primary-600' : 'border-slate-300 group-hover:border-primary-400'}`}>
-                    {task.completed && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                    {task.completed && <svg className="w-4 h-4 text-white animate-scale-in" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                 </div>
                 <div className="ml-4">
-                    <p className={`font-semibold text-slate-800 transition-all ${task.completed ? 'line-through text-slate-500' : ''}`}>{task.title}</p>
+                    <p className={`relative font-semibold text-slate-800 transition-all ${task.completed ? 'text-slate-500' : ''}`}>
+                      {task.title}
+                      <span className={`absolute top-1/2 left-0 w-full h-0.5 bg-slate-400 transform transition-transform duration-300 ${task.completed ? 'scale-x-100' : 'scale-x-0'}`} style={{ transformOrigin: 'left' }}></span>
+                    </p>
                     <div className="flex items-center text-sm mt-1">
                         <div className={`w-2 h-2 rounded-full mr-2 ${dueDateInfo.dotColor}`}></div>
                         <span className={dueDateInfo.textColor}>{dueDateInfo.text}</span>

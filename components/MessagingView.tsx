@@ -306,7 +306,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
         <div className="w-full max-w-sm border-r border-slate-200/80 flex flex-col">
           <div className="p-4 border-b border-slate-200/80 flex justify-between items-center h-[80px]">
               <h1 className="text-2xl font-bold text-slate-800">Messages</h1>
-              {currentUser.role === UserRole.ADMIN && viewMode === 'INBOX' && (
+              {(currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER) && viewMode === 'INBOX' && (
                   <button onClick={onOpenBroadcast} className="flex items-center text-sm font-semibold text-primary-600 hover:text-primary-800 bg-primary-100/50 hover:bg-primary-100 px-3 py-1.5 rounded-lg transition-colors button-press" aria-label="Broadcast an announcement">
                       <BroadcastIcon className="w-5 h-5 mr-2" /> Broadcast
                   </button>
@@ -423,7 +423,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
                           const showDateSeparator = !prevMsg || !isSameDay(new Date(msg.timestamp), new Date(prevMsg.timestamp));
                           const isFirstInSequence = !prevMsg || prevMsg.senderId !== msg.senderId || !isSameDay(new Date(msg.timestamp), new Date(prevMsg.timestamp));
                           const isLastInSequence = !nextMsg || nextMsg.senderId !== msg.senderId || !isSameDay(new Date(msg.timestamp), new Date(nextMsg.timestamp));
-                          const bubbleClasses = ['px-3.5 py-2.5 rounded-3xl max-w-md lg:max-w-xl break-words relative shadow-sm', isMyMessage ? 'bg-primary-600 text-white' : 'bg-slate-200 text-slate-900', isFirstInSequence && isMyMessage ? 'rounded-tr-lg' : '', isFirstInSequence && !isMyMessage ? 'rounded-tl-lg' : '', isLastInSequence && isMyMessage ? 'rounded-br-lg' : '', isLastInSequence && !isMyMessage ? 'rounded-bl-lg' : ''].join(' ');
+                          const bubbleClasses = ['px-3.5 py-2.5 rounded-3xl max-w-md lg:max-w-xl break-words relative shadow-sm animate-scale-in', isMyMessage ? 'bg-primary-600 text-white' : 'bg-slate-200 text-slate-900', isFirstInSequence && isMyMessage ? 'rounded-tr-lg' : '', isFirstInSequence && !isMyMessage ? 'rounded-tl-lg' : '', isLastInSequence && isMyMessage ? 'rounded-br-lg' : '', isLastInSequence && !isMyMessage ? 'rounded-bl-lg' : ''].join(' ');
                           const isEditingThis = editingMessage?.id === msg.id;
                           const isCurrentSearchResult = searchResults[currentResultIndex] === msg.id;
                           

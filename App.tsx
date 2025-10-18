@@ -524,7 +524,9 @@ const App: React.FC = () => {
                     onLogout={handleLogout}
                 />
                 <main className="flex-1 overflow-y-auto ml-72">
-                    {renderView()}
+                    <div key={view + viewParam} className="page-enter">
+                        {renderView()}
+                    </div>
                 </main>
             </div>
             {currentUser.role === UserRole.ADMIN && (

@@ -69,7 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
   const displayRole = impersonatedRole || currentUser.role;
   const navItems = navConfig[displayRole];
 
-  const baseClasses = 'flex items-center px-4 py-3 text-sm font-medium rounded-xl';
+  const baseClasses = 'flex items-center px-4 py-3 text-sm font-medium rounded-xl group';
   const activeClasses = 'bg-primary-50 text-primary-600 font-semibold shadow-[0_2px_10px_-3px_rgba(99,102,241,0.3)]';
   const inactiveClasses = 'text-slate-500 hover:bg-slate-100/50 hover:text-slate-800';
   
@@ -135,7 +135,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
                 {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-xs font-bold text-white">{unreadCount}</span>}
             </button>
             {isNotificationsOpen && (
-                 <div className="absolute top-full mt-2 right-0 w-80 bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-2xl shadow-premium-lg z-20 modal-panel">
+                 <div className="absolute top-full mt-2 right-0 w-80 bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-2xl shadow-premium-lg z-20 dropdown-panel">
                     <div className="p-3 flex justify-between items-center border-b border-slate-200">
                         <h3 className="font-semibold text-slate-800">Notifications</h3>
                         <button onClick={() => onClearAllNotifications(currentUser.id)} className="text-xs text-primary-600 hover:underline">Mark all as read</button>
@@ -165,7 +165,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
                 onClick={() => onNavigate(item.id)}
                 className={`${baseClasses} ${currentView.startsWith(item.id) ? activeClasses : inactiveClasses} w-full text-left button-press`}
               >
-                <span className="mr-3">{React.cloneElement(item.icon, { className: 'w-5 h-5' })}</span>
+                <span className="mr-3 transition-transform duration-200 group-hover:scale-110">{React.cloneElement(item.icon, { className: 'w-5 h-5' })}</span>
                 {item.label}
               </button>
             </li>
@@ -185,7 +185,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
           </div>
         </div>
         {isDropdownOpen && (
-            <div className="absolute bottom-full mb-2 w-full bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-xl shadow-premium-lg py-1 z-10 modal-panel">
+            <div className="absolute bottom-full mb-2 w-full bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-xl shadow-premium-lg py-1 z-10 dropdown-panel">
                 <a href="#" onClick={(e) => { e.preventDefault(); onEditMyProfile(); setIsDropdownOpen(false); }} className="flex items-center px-3 py-2 text-sm text-slate-700 hover:bg-slate-100/50">
                     <PencilIcon className="w-4 h-4 mr-3 text-slate-500" />
                     <span>Edit My Profile</span>

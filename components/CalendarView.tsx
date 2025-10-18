@@ -15,6 +15,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
   const [currentDate, setCurrentDate] = useState(new Date('2025-10-01T12:00:00Z'));
   const [selectedDate, setSelectedDate] = useState(new Date('2025-10-16T12:00:00Z'));
 
+  const noteColorMapping: Record<string, { bg: string, text: string }> = {
+    'Red': { bg: 'bg-rose-500', text: 'text-white' },
+    'Yellow': { bg: 'bg-amber-500', text: 'text-white' },
+    'Green': { bg: 'bg-emerald-500', text: 'text-white' },
+    'Blue': { bg: 'bg-sky-500', text: 'text-white' },
+    'Purple': { bg: 'bg-violet-500', text: 'text-white' },
+    'Gray': { bg: 'bg-slate-500', text: 'text-white' },
+  };
+
   const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     calendarEvents.forEach(event => {
@@ -76,15 +85,24 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
     
     const eventColors: Array<CalendarEvent['color']> = [...new Set<CalendarEvent['color']>(dayEvents.map(e => e.color))];
 
+    let dayClasses = 'bg-white hover:bg-primary-50 hover:border-primary-200';
+    let eventDotIsWhite = false;
+
+    if (isSelected) {
+        dayClasses = 'bg-primary-600 text-white font-bold shadow-lg';
+        eventDotIsWhite = true;
+    } else if (dayNotes.length > 0) {
+        const noteColorName = dayNotes[0].color;
+        const color = noteColorMapping[noteColorName] || noteColorMapping['Gray'];
+        dayClasses = `${color.bg} ${color.text} shadow-md opacity-90 hover:opacity-100`;
+        eventDotIsWhite = true;
+    }
+
     calendarDays.push(
       <button
         key={day}
         onClick={() => handleDayClick(day)}
-        className={`relative p-3 text-center border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500/50 ${
-          isSelected
-            ? 'bg-primary-600 text-white font-bold shadow-lg'
-            : 'bg-white hover:bg-primary-50 hover:border-primary-200'
-        }`}
+        className={`relative p-3 text-center border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500/50 ${dayClasses}`}
       >
         <span className="text-sm">{day}</span>
         <div className="flex justify-center items-center mt-2 space-x-1 h-2">
@@ -96,14 +114,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
                 orange: 'bg-orange-500',
                 red: 'bg-red-500',
               }[color];
-              return <div key={color} className={`w-1.5 h-1.5 rounded-full ${colorClass} ${isSelected ? 'bg-white' : ''}`}></div>;
+              return <div key={color} className={`w-1.5 h-1.5 rounded-full ${eventDotIsWhite ? 'bg-white/70' : colorClass}`}></div>;
             })}
         </div>
-        {dayNotes.length > 0 && (
-          <div className="absolute top-1.5 right-1.5">
-            <TagIcon className={`w-3.5 h-3.5 ${isSelected ? 'text-white/70' : 'text-slate-400'}`} />
-          </div>
-        )}
       </button>
     );
   }

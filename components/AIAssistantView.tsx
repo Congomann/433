@@ -18,12 +18,26 @@ interface AIAssistantViewProps {
   onNavigate: (view: string) => void;
 }
 
+const SkeletonSuggestion: React.FC = () => (
+    <div className="p-5 rounded-lg border-l-4 bg-slate-50 border-slate-200">
+        <div className="flex justify-between items-start">
+            <div>
+                <div className="skeleton-loader h-5 w-24 rounded-full mb-3"></div>
+                <div className="skeleton-loader h-6 w-64 rounded-md mb-2"></div>
+                <div className="skeleton-loader h-4 w-96 rounded-md"></div>
+            </div>
+            <div className="skeleton-loader h-10 w-32 rounded-md ml-4"></div>
+        </div>
+    </div>
+);
+
+
 const AIAssistantView: React.FC<AIAssistantViewProps> = ({ currentUser, clients, tasks, agents, policies, interactions, onSaveTask, onAssignLead, onNavigate }) => {
   const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { addToast } = useToast();
   
-  const [completedActions, setCompletedActions] = useState<number[]>([]); // To track completed suggestions by index
+  const [completedActions, setCompletedActions] = useState<Set<number>>(new Set());
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [taskToCreate, setTaskToCreate] = useState<Omit<Task, 'id' | 'completed' | 'agentId'> | null>(null);
@@ -94,8 +108,7 @@ const AIAssistantView: React.FC<AIAssistantViewProps> = ({ currentUser, clients,
         // No action needed
         break;
     }
-    // Mark this action as completed to provide visual feedback.
-    setCompletedActions(prev => [...prev, index]);
+    setCompletedActions(prev => new Set(prev).add(index));
   };
 
   const PRIORITY_STYLES = {
@@ -121,16 +134,17 @@ const AIAssistantView: React.FC<AIAssistantViewProps> = ({ currentUser, clients,
       </div>
 
       {isLoading ? (
-        <div className="text-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Your AI assistant is analyzing your data...</p>
+        <div className="space-y-6">
+            <SkeletonSuggestion />
+            <SkeletonSuggestion />
+            <SkeletonSuggestion />
         </div>
       ) : (
         <div className="space-y-6">
           {suggestions.length > 0 ? suggestions.map((suggestion, index) => {
             const styles = PRIORITY_STYLES[suggestion.priority] || PRIORITY_STYLES.Low;
             const buttonInfo = ACTION_BUTTONS[suggestion.action.type];
-            const isCompleted = completedActions.includes(index);
+            const isCompleted = completedActions.has(index);
             return (
               <div key={index} className={`p-5 rounded-lg border-l-4 ${styles.bg} ${styles.border} card-enter`} style={{ animationDelay: `${index * 100}ms`}}>
                 <div className="flex justify-between items-start">
@@ -142,20 +156,22 @@ const AIAssistantView: React.FC<AIAssistantViewProps> = ({ currentUser, clients,
                     <p className="text-slate-600 mt-1">{suggestion.description}</p>
                   </div>
                   {buttonInfo && suggestion.action.type !== 'INFO_ONLY' && (
-                     isCompleted ? (
-                        <div className="flex items-center text-emerald-600 font-semibold text-sm ml-4 flex-shrink-0">
-                            <CheckCircleIcon className="w-5 h-5 mr-2" />
-                            Action Completed
-                        </div>
-                    ) : (
-                        <button
-                          onClick={() => handleAction(suggestion.action, index)}
-                          className="flex items-center bg-primary-600 text-white font-semibold px-4 py-2 rounded-md shadow-sm hover:bg-primary-500 text-sm ml-4 flex-shrink-0 button-press"
-                        >
-                          {isDraftingEmail && suggestion.action.type === 'DRAFT_EMAIL' ? 'Drafting...' : buttonInfo.icon}
-                          {isDraftingEmail && suggestion.action.type === 'DRAFT_EMAIL' ? '' : buttonInfo.text}
-                        </button>
-                    )
+                     <div className="ml-4 flex-shrink-0">
+                        {isCompleted ? (
+                            <div className="flex items-center text-emerald-600 font-semibold text-sm h-10 px-4 animate-scale-in">
+                                <CheckCircleIcon className="w-5 h-5 mr-2" />
+                                Done
+                            </div>
+                        ) : (
+                            <button
+                              onClick={() => handleAction(suggestion.action, index)}
+                              disabled={isDraftingEmail}
+                              className="flex items-center justify-center bg-primary-600 text-white font-semibold px-4 h-10 rounded-md shadow-sm hover:bg-primary-500 text-sm button-press disabled:bg-slate-400"
+                            >
+                              {isDraftingEmail && suggestion.action.type === 'DRAFT_EMAIL' ? 'Drafting...' : <>{buttonInfo.icon}{buttonInfo.text}</>}
+                            </button>
+                        )}
+                    </div>
                   )}
                 </div>
               </div>
