@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as apiClient from '../services/apiClient';
-import { AppData, User, Agent, Client, Policy, Interaction, Task, Message, ClientStatus, UserRole, InteractionType, AgentStatus, License, Notification, CalendarNote, Testimonial, TestimonialStatus, CalendarEvent, Chargeback, ChargebackStatus, PolicyUnderwritingStatus, AICallLog } from '../types';
+import { AppData, User, Agent, Client, Policy, Interaction, Task, Message, ClientStatus, UserRole, InteractionType, AgentStatus, License, Notification, CalendarNote, Testimonial, TestimonialStatus, CalendarEvent, Chargeback, ChargebackStatus, PolicyUnderwritingStatus, AICallLog, DayOff } from '../types';
 import { useToast } from '../contexts/ToastContext';
 
 export const useDatabase = (currentUser: User | null) => {
@@ -8,7 +8,7 @@ export const useDatabase = (currentUser: User | null) => {
         users: [], agents: [], clients: [], policies: [], interactions: [],
         tasks: [], messages: [], licenses: [], notifications: [],
         calendarNotes: [], testimonials: [], calendarEvents: [], chargebacks: [],
-        aiCallLogs: []
+        aiCallLogs: [], daysOff: [],
     });
     const [isLoading, setIsLoading] = useState(true);
     const { addToast } = useToast();
@@ -206,6 +206,18 @@ export const useDatabase = (currentUser: User | null) => {
                 addToast('Error', error.message || 'Could not send message.', 'error');
             }
         },
+        handleToggleDayOff: (date: string) => handleApiCall(
+            () => apiClient.post('/api/day-off/toggle', { date }),
+            'Calendar Updated', 'Your schedule has been updated.'
+        ),
+        handleAddDaysOffBatch: (dates: string[]) => handleApiCall(
+            () => apiClient.addDaysOffBatch(dates),
+            'Days Off Added', `${dates.length} day(s) have been marked as off.`
+        ),
+        handleDeleteDaysOffBatch: (dates: string[]) => handleApiCall(
+            () => apiClient.deleteDaysOffBatch(dates),
+            'Days Off Removed', `${dates.length} day(s) have been made available.`
+        ),
     };
 
     return { isLoading, ...data, handlers, refetchData: fetchData };

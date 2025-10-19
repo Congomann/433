@@ -1,6 +1,6 @@
 import { db } from '../db';
 // FIX: Added Chargeback to import list to support fetching chargeback data.
-import { User, UserRole, Policy, Client, Interaction, Task, License, Testimonial, Notification, PolicyStatus, NotificationType, CalendarEvent, Message, CalendarNote, Chargeback, AICallLog } from '../../types';
+import { User, UserRole, Policy, Client, Interaction, Task, License, Testimonial, Notification, PolicyStatus, NotificationType, CalendarEvent, Message, CalendarNote, Chargeback, AICallLog, DayOff } from '../../types';
 
 const checkAndCreateRenewalNotifications = async (policies: Policy[], clients: Client[], notifications: Notification[]) => {
     const today = new Date();
@@ -50,7 +50,8 @@ export const getAllData = async (currentUser: User) => {
     // FIX: Added chargebacks to data fetching to ensure all app data is available.
     const [
         users, agents, clients, policies, interactions, tasks, messages,
-        licenses, calendarNotes, testimonials, initialNotifications, calendarEvents, chargebacks, aiCallLogs
+        licenses, calendarNotes, testimonials, initialNotifications, calendarEvents, chargebacks, aiCallLogs,
+        daysOff
     ] = await Promise.all([
         db.users.find(),
         db.agents.find(),
@@ -66,7 +67,8 @@ export const getAllData = async (currentUser: User) => {
         db.getAll<Notification>('notifications'), // Fetch initial notifications
         db.getAll<CalendarEvent>('calendarEvents'),
         db.getAll<Chargeback>('chargebacks'),
-        db.getAll<AICallLog>('ai_calls')
+        db.getAll<AICallLog>('ai_calls'),
+        db.getAll<DayOff>('daysOff'),
     ]);
 
     // Check for renewals and create notifications if necessary
@@ -84,7 +86,7 @@ export const getAllData = async (currentUser: User) => {
         users: sanitizedUsers,
         agents, clients, policies, interactions, tasks, messages,
         licenses, notifications: finalNotifications, calendarNotes, testimonials, calendarEvents,
-        chargebacks, aiCallLogs
+        chargebacks, aiCallLogs, daysOff
     };
     
     // Filter data based on the current user's role

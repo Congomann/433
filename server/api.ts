@@ -6,7 +6,7 @@ import * as messagesController from './controllers/messagesController';
 import * as dataController from './controllers/dataController';
 import * as auth from './auth';
 import { db } from './db';
-import { User, UserRole, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, PolicyStatus, Chargeback, ChargebackStatus, NotificationType, PolicyUnderwritingStatus, CalendarEvent } from '../types';
+import { User, UserRole, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, PolicyStatus, Chargeback, ChargebackStatus, NotificationType, PolicyUnderwritingStatus, CalendarEvent, DayOff } from '../types';
 
 const SIMULATED_LATENCY = 0; // ms
 
@@ -70,22 +70,91 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
         return await messagesController.markAllNotificationsRead(body.userId);
     }
 
-    if (path === '/api/calls/start' && method === 'POST') {
-        const { agentPhone, clientPhone } = body;
-        // SIMULATION: In a real app, this would trigger a Twilio/Vonage API call.
-        // The service would call the agent, and upon answer, bridge the call to the client.
-        console.log(`[SIMULATED CALL] Initiating call to agent at ${agentPhone}, then connecting to client at ${clientPhone}.`);
-        const callSid = `CA${Math.random().toString(36).substring(2, 18)}`;
-        return { callSid };
-    }
+    if (path === '/api/day-off/toggle' && method === 'POST') {
+        const { date } = body; // date is 'YYYY-MM-DD'
+        const userId = currentUser.id;
+        
+        const allDaysOff = await db.getAll<DayOff>('daysOff');
+        const existingDayOff = allDaysOff.find(d => d.userId === userId && d.date === date);
 
-    if (path === '/api/calls/end' && method === 'POST') {
-        const { callSid } = body;
-        // SIMULATION: This would trigger an API call to terminate the specified call leg.
-        console.log(`[SIMULATED CALL] Ending call with SID: ${callSid}`);
-        return { success: true };
+        if (existingDayOff) {
+            // Day off exists, so remove it
+            const allEvents = await db.getAll<CalendarEvent>('calendarEvents');
+            const correspondingEvent = allEvents.find(e => e.dayOffId === existingDayOff.id);
+            if (correspondingEvent) {
+                await db.deleteRecord('calendarEvents', correspondingEvent.id);
+            }
+            return await db.deleteRecord('daysOff', existingDayOff.id);
+        } else {
+            // Day off does not exist, so create it
+            const newDayOff = await db.createRecord<DayOff>('daysOff', { userId, date });
+            
+            const eventData: Omit<CalendarEvent, 'id'> = {
+                date: newDayOff.date,
+                time: 'All Day',
+                title: `Day Off: ${currentUser.name}`,
+                tag: 'personal',
+                color: 'red',
+                location: 'Out of Office',
+                agentId: newDayOff.userId,
+                source: 'internal',
+                dayOffId: newDayOff.id
+            };
+            await db.createRecord('calendarEvents', eventData);
+            return newDayOff;
+        }
     }
     
+    if (path === '/api/day-off/batch-add' && method === 'POST') {
+        const { dates } = body as { dates: string[] };
+        const userId = currentUser.id;
+        const allDaysOff = await db.getAll<DayOff>('daysOff');
+        const userDaysOff = new Set(allDaysOff.filter(d => d.userId === userId).map(d => d.date));
+
+        const newDaysOff: DayOff[] = [];
+        for (const date of dates) {
+            if (!userDaysOff.has(date)) {
+                const newDayOff = await db.createRecord<DayOff>('daysOff', { userId, date });
+                const eventData: Omit<CalendarEvent, 'id'> = {
+                    date: newDayOff.date,
+                    time: 'All Day',
+                    title: `Day Off: ${currentUser.name}`,
+                    tag: 'personal',
+                    color: 'red',
+                    location: 'Out of Office',
+                    agentId: newDayOff.userId,
+                    source: 'internal',
+                    dayOffId: newDayOff.id
+                };
+                await db.createRecord('calendarEvents', eventData);
+                newDaysOff.push(newDayOff);
+            }
+        }
+        return { success: true, created: newDaysOff.length };
+    }
+    
+    if (path === '/api/day-off/batch-delete' && method === 'POST') {
+        const { dates } = body as { dates: string[] };
+        const userId = currentUser.id;
+        
+        const allDaysOff = await db.getAll<DayOff>('daysOff');
+        const allEvents = await db.getAll<CalendarEvent>('calendarEvents');
+
+        let deletedCount = 0;
+        for (const date of dates) {
+            const dayOffToDelete = allDaysOff.find(d => d.userId === userId && d.date === date);
+            if (dayOffToDelete) {
+                const eventToDelete = allEvents.find(e => e.dayOffId === dayOffToDelete.id);
+                if (eventToDelete) {
+                    await db.deleteRecord('calendarEvents', eventToDelete.id);
+                }
+                await db.deleteRecord('daysOff', dayOffToDelete.id);
+                deletedCount++;
+            }
+        }
+        return { success: true, deleted: deletedCount };
+    }
+
     const resourceMatch = path.match(/^\/api\/([a-zA-Z0-9]+)(?:\/(\d+))?$/);
     if (resourceMatch) {
         const [, resource, idStr] = resourceMatch;
@@ -96,11 +165,15 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
                 const newNote = await db.createRecord<CalendarNote>(resource, body);
                 
                 const colorMap: Record<string, CalendarEvent['color']> = { 'Blue': 'blue', 'Green': 'green', 'Yellow': 'orange', 'Red': 'red', 'Purple': 'purple', 'Gray': 'blue' };
+                
+                const eventTitle = (newNote.reason && newNote.name)
+                    ? `${newNote.reason} for ${newNote.name}`
+                    : newNote.reason || newNote.text || 'Calendar Note';
 
                 const eventData: Omit<CalendarEvent, 'id'> = {
                     date: newNote.date,
                     time: '12:00 PM',
-                    title: newNote.text,
+                    title: eventTitle,
                     tag: 'note',
                     color: colorMap[newNote.color] || 'blue',
                     location: 'Note',
@@ -120,10 +193,14 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
 
                 if (correspondingEvent) {
                     const colorMap: Record<string, CalendarEvent['color']> = { 'Blue': 'blue', 'Green': 'green', 'Yellow': 'orange', 'Red': 'red', 'Purple': 'purple', 'Gray': 'blue' };
-// FIX: Explicitly specify the generic type for `db.updateRecord` to resolve a TypeScript error where properties of CalendarEvent were not being recognized.
+                    
+                    const eventTitle = (updatedNote.reason && updatedNote.name)
+                        ? `${updatedNote.reason} for ${updatedNote.name}`
+                        : updatedNote.reason || updatedNote.text || 'Calendar Note';
+
                     await db.updateRecord<CalendarEvent>('calendarEvents', correspondingEvent.id, {
                         date: updatedNote.date,
-                        title: updatedNote.text,
+                        title: eventTitle,
                         color: colorMap[updatedNote.color] || 'blue',
                     });
                 }

@@ -177,6 +177,8 @@ const getUnderwritingStatusBadge = (status: PolicyUnderwritingStatus | undefined
 const PolicyCard: React.FC<{ policy: Policy; onEdit: (policy: Policy) => void; onUpdatePolicy: (policyId: number, updates: Partial<Policy>) => void; currentUser: User; onReview: (policy: Policy) => void; }> = ({ policy, onEdit, onUpdatePolicy, currentUser, onReview }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const isUnderwriter = currentUser.role === UserRole.UNDERWRITING;
+    const canSeeNotes = useMemo(() => [UserRole.ADMIN, UserRole.UNDERWRITING, UserRole.MANAGER].includes(currentUser.role), [currentUser.role]);
+
 
     const handleStatusChange = (status: PolicyStatus) => {
         if (window.confirm(`Are you sure you want to mark this policy as ${status}?`)) {
@@ -241,8 +243,14 @@ const PolicyCard: React.FC<{ policy: Policy; onEdit: (policy: Policy) => void; o
                 </div>
             </div>
             <p className="text-sm text-slate-500 mt-2 border-t border-slate-200/50 pt-2">Effective: {policy.startDate} - {policy.endDate}</p>
-            {isUnderwriter && (
+            {policy.underwritingNotes && canSeeNotes && (
                 <div className="mt-3 pt-3 border-t border-slate-200/50">
+                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Underwriting Notes</h4>
+                    <p className="mt-1 text-sm text-slate-600 whitespace-pre-wrap">{policy.underwritingNotes}</p>
+                </div>
+            )}
+            {isUnderwriter && (
+                <div className={`mt-3 pt-3 ${canSeeNotes && policy.underwritingNotes ? '' : 'border-t border-slate-200/50'}`}>
                     <button 
                         onClick={() => onReview(policy)}
                         className="w-full flex items-center justify-center bg-indigo-100 text-indigo-700 font-semibold px-3 py-2 text-sm rounded-lg hover:bg-indigo-200 transition-colors"

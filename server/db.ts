@@ -1,5 +1,5 @@
-import { MOCK_USERS, MOCK_AGENTS, MOCK_CLIENTS, MOCK_POLICIES, MOCK_INTERACTIONS, MOCK_TASKS, MOCK_MESSAGES, MOCK_LICENSES, MOCK_NOTIFICATIONS, MOCK_CALENDAR_NOTES, MOCK_TESTIMONIALS, MOCK_CALENDAR_EVENTS, MOCK_CHARGEBACKS, MOCK_AI_CALL_LOGS } from '../constants';
-import { User, Agent, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, CalendarEvent, Chargeback, AICallLog } from '../types';
+import { MOCK_USERS, MOCK_AGENTS, MOCK_CLIENTS, MOCK_POLICIES, MOCK_INTERACTIONS, MOCK_TASKS, MOCK_MESSAGES, MOCK_LICENSES, MOCK_NOTIFICATIONS, MOCK_CALENDAR_NOTES, MOCK_TESTIMONIALS, MOCK_CALENDAR_EVENTS, MOCK_CHARGEBACKS, MOCK_AI_CALL_LOGS, MOCK_DAYS_OFF } from '../constants';
+import { User, Agent, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, CalendarEvent, Chargeback, AICallLog, DayOff } from '../types';
 
 const DB_NAME = 'NewHollandCRM_DB';
 const DB_VERSION = 1;
@@ -19,6 +19,7 @@ const STORES = {
     calendarEvents: 'calendarEvents',
     chargebacks: 'chargebacks',
     aiCallLogs: 'ai_calls',
+    daysOff: 'daysOff',
 };
 
 let dbPromise: Promise<IDBDatabase>;
@@ -97,6 +98,10 @@ export const initDB = (): Promise<IDBDatabase> => {
             if (!db.objectStoreNames.contains(STORES.aiCallLogs)) {
                 const store = db.createObjectStore(STORES.aiCallLogs, { keyPath: 'id' });
                 seedFunctions.push(() => MOCK_AI_CALL_LOGS.forEach(item => store.add(item)));
+            }
+            if (!db.objectStoreNames.contains(STORES.daysOff)) {
+                const store = db.createObjectStore(STORES.daysOff, { keyPath: 'id', autoIncrement: true });
+                seedFunctions.push(() => MOCK_DAYS_OFF.forEach(item => store.add(item)));
             }
 
             // After defining schema, run all seed functions within this transaction

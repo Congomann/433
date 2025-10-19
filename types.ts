@@ -252,12 +252,22 @@ export interface CalendarNote {
   date: string; // YYYY-MM-DD
   text: string;
   color: string; // e.g., 'Blue', 'Green', 'Red'
+  name?: string;
+  phone?: string;
+  email?: string;
+  reason?: string;
+}
+
+export interface DayOff {
+  id: number;
+  userId: number;
+  date: string; // YYYY-MM-DD
 }
 
 export interface CalendarEvent {
   id: number;
   date: string; // YYYY-MM-DD
-  time: string; // e.g., '10:00 AM'
+  time: string; // e.g., '10:00 AM' or 'All Day'
   title: string;
   tag: string;
   color: 'blue' | 'purple' | 'green' | 'orange' | 'red';
@@ -265,6 +275,7 @@ export interface CalendarEvent {
   agentId: number;
   source?: 'internal' | 'google';
   noteId?: number;
+  dayOffId?: number;
 }
 
 export interface Testimonial {
@@ -300,6 +311,13 @@ export interface EmailDraft {
   body: string;
 }
 
+export interface AICallAnalysis {
+  summary: string;
+  sentiment: 'Positive' | 'Neutral' | 'Negative';
+  keywords: string[];
+  actionItems: string[];
+}
+
 export interface AICallLog {
   id: string; // Firestore document ID
   name: string;
@@ -307,6 +325,7 @@ export interface AICallLog {
   intent: 'Interested' | 'Not Interested' | 'Callback Requested' | 'Unknown';
   status: string; // e.g., "Quote provided for age 35 in TX", "Callback at 2024-08-01T14:00:00"
   timestamp: string;
+  callRecordingUrl?: string;
 }
 
 export interface AppData {
@@ -324,4 +343,5 @@ export interface AppData {
     calendarEvents: CalendarEvent[];
     chargebacks: Chargeback[];
     aiCallLogs: AICallLog[];
+    daysOff: DayOff[];
 }

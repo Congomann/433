@@ -82,10 +82,10 @@ export const updateMyProfile = async (userData: Partial<User>) => {
     return put('/api/users/me', userData);
 };
 
-export const startPstnCall = (data: { agentPhone: string; clientPhone: string }): Promise<{ callSid: string }> => {
-    return post<{ callSid: string }>('/api/calls/start', data);
+export const addDaysOffBatch = (dates: string[]) => {
+    return post('/api/day-off/batch-add', { dates });
 };
 
-export const endPstnCall = (data: { callSid: string }): Promise<{ success: boolean }> => {
-    return post<{ success: boolean }>('/api/calls/end', data);
+export const deleteDaysOffBatch = (dates: string[]) => {
+    return post('/api/day-off/batch-delete', { dates });
 };

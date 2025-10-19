@@ -1,5 +1,5 @@
 // FIX: Add NotificationType to imports to resolve type error.
-import { Client, Policy, Interaction, Task, ClientStatus, PolicyType, PolicyStatus, InteractionType, User, UserRole, Agent, Message, AgentStatus, License, LicenseType, Notification, CalendarNote, Testimonial, TestimonialStatus, CalendarEvent, Chargeback, ChargebackStatus, PolicyUnderwritingStatus, NotificationType, AICallLog } from './types';
+import { Client, Policy, Interaction, Task, ClientStatus, PolicyType, PolicyStatus, InteractionType, User, UserRole, Agent, Message, AgentStatus, License, LicenseType, Notification, CalendarNote, Testimonial, TestimonialStatus, CalendarEvent, Chargeback, ChargebackStatus, PolicyUnderwritingStatus, NotificationType, AICallLog, DayOff } from './types';
 // FIX: Add ShieldIcon to imports to resolve missing component error.
 import { ShieldCheckIcon, ShieldIcon, CalendarDaysIcon, SunIcon, ArrowsUpDownIcon, ChartTrendingUpIcon, TruckIcon, CarIcon, WrenchScrewdriverIcon, HomeIcon, BuildingOfficeIcon, FireIcon, StethoscopeIcon } from './components/icons';
 import React from 'react';
@@ -164,16 +164,21 @@ const BASE_MOCK_NOTIFICATIONS: Notification[] = [
 ];
 
 const BASE_MOCK_CALENDAR_NOTES: CalendarNote[] = [
-    { id: 1, userId: 3, date: '2024-07-29', text: 'Team meeting re: Q3 goals', color: 'Blue' }
+    { id: 1, userId: 3, date: '2024-07-29', text: 'Additional details about the quote discussed.', color: 'Blue', name: 'Peter Jones', phone: '555-555-6666', email: 'peter.jones@example.com', reason: 'Follow-up on IUL Quote' }
 ];
 
 const BASE_MOCK_TESTIMONIALS: Testimonial[] = [
     { id: 1, agentId: 3, author: 'John S.', quote: 'Kara was amazing! She helped us find the perfect coverage for our family.', status: TestimonialStatus.APPROVED, submissionDate: '2024-05-10' }
 ];
 
+const BASE_MOCK_DAYS_OFF: DayOff[] = [
+    { id: 1, userId: 9, date: '2025-10-20' }, // Manager Felix Gaeta is off
+];
+
 const BASE_MOCK_CALENDAR_EVENTS: CalendarEvent[] = [
     { id: 1, date: '2025-10-16', time: '10:00 AM', title: 'Follow-up with Peter Jones', tag: 'lead', color: 'blue', location: 'Phone Call', agentId: 3 },
     { id: 2, date: '2024-07-29', time: '12:00 PM', title: 'Team meeting re: Q3 goals', tag: 'note', color: 'blue', location: 'Note', agentId: 3, noteId: 1 },
+    { id: 3, date: '2025-10-20', time: 'All Day', title: 'Day Off: Felix Gaeta', tag: 'personal', color: 'red', location: 'Out of Office', agentId: 9, dayOffId: 1 },
 ];
 
 const BASE_MOCK_CHARGEBACKS: Chargeback[] = [
@@ -181,8 +186,8 @@ const BASE_MOCK_CHARGEBACKS: Chargeback[] = [
 ];
 
 const BASE_MOCK_AI_CALL_LOGS: AICallLog[] = [
-    { id: 'call1', name: 'John Smith', phone: '555-111-2222', intent: 'Interested', status: 'Quote provided for age 35 in TX', timestamp: '2024-07-24T14:30:00Z' },
-    { id: 'call2', name: 'Jane Doe', phone: '555-333-4444', intent: 'Callback Requested', status: 'Requested callback tomorrow around noon', timestamp: '2024-07-24T14:35:00Z' },
+    { id: 'call1', name: 'John Smith', phone: '555-111-2222', intent: 'Interested', status: 'Quote provided for age 35 in TX', timestamp: '2024-07-24T14:30:00Z', callRecordingUrl: '/mock/recording1.mp3' },
+    { id: 'call2', name: 'Jane Doe', phone: '555-333-4444', intent: 'Callback Requested', status: 'Requested callback tomorrow around noon', timestamp: '2024-07-24T14:35:00Z', callRecordingUrl: '/mock/recording2.mp3' },
     { id: 'call3', name: 'Peter Jones', phone: '555-555-6666', intent: 'Not Interested', status: 'Marked as Do Not Contact', timestamp: '2024-07-24T14:40:00Z' },
 ];
 
@@ -201,6 +206,7 @@ export const MOCK_TESTIMONIALS = BASE_MOCK_TESTIMONIALS;
 export const MOCK_CALENDAR_EVENTS = BASE_MOCK_CALENDAR_EVENTS;
 export const MOCK_CHARGEBACKS = BASE_MOCK_CHARGEBACKS;
 export const MOCK_AI_CALL_LOGS = BASE_MOCK_AI_CALL_LOGS;
+export const MOCK_DAYS_OFF = BASE_MOCK_DAYS_OFF;
 
 
 export interface InsuranceService {

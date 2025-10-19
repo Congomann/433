@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { AppData, User, UserRole, Agent, AgentStatus, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, ClientStatus, TestimonialStatus, EmailDraft, CalendarEvent, Chargeback, ChargebackStatus, AICallLog } from './types';
+import { AppData, User, UserRole, Agent, AgentStatus, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, ClientStatus, TestimonialStatus, EmailDraft, CalendarEvent, Chargeback, ChargebackStatus, AICallLog, DayOff } from './types';
 import { useDatabase } from './hooks/useDatabase';
 import { useToast } from './contexts/ToastContext';
 import Sidebar from './components/Sidebar';
@@ -452,7 +452,7 @@ const App: React.FC = () => {
                 case 'commissions': return <CommissionsView currentUser={displayUser!} agents={displayData.agents} policies={displayData.policies} clients={displayData.clients} chargebacks={displayData.chargebacks} onUpdatePolicy={displayData.handlers.handleUpdatePolicy} />;
                 case 'chargebacks': return <ChargebackView chargebacks={displayData.chargebacks} onUpdateStatus={displayData.handlers.handleUpdateChargebackStatus} />;
                 case 'messages': return <MessagingView currentUser={displayUser!} users={displayData.users} messages={displayData.messages} onSendMessage={displayData.handlers.handleSendMessage} onEditMessage={displayData.handlers.handleEditMessage} onTrashMessage={displayData.handlers.handleTrashMessage} onRestoreMessage={displayData.handlers.handleRestoreMessage} onPermanentlyDeleteMessage={displayData.handlers.handlePermanentlyDeleteMessage} initialSelectedUserId={viewParam ? Number(viewParam) : undefined} onMarkConversationAsRead={displayData.handlers.handleMarkConversationAsRead} onOpenBroadcast={() => setIsBroadcastModalOpen(true)} onTyping={() => {}} typingStatus={{}} />;
-                case 'calendar': return <CalendarView currentUser={displayUser!} agents={displayData.agents} calendarEvents={displayData.calendarEvents} calendarNotes={displayData.calendarNotes} users={displayData.users} onOpenNoteModal={handleOpenNoteModal} />;
+                case 'calendar': return <CalendarView currentUser={displayUser!} agents={displayData.agents} calendarEvents={displayData.calendarEvents} calendarNotes={displayData.calendarNotes} users={displayData.users} onOpenNoteModal={handleOpenNoteModal} daysOff={displayData.daysOff} onToggleDayOff={displayData.handlers.handleToggleDayOff} onAddDaysOffBatch={displayData.handlers.handleAddDaysOffBatch} onDeleteDaysOffBatch={displayData.handlers.handleDeleteDaysOffBatch} />;
                 case 'licenses': {
                     if (!currentAgent) return <div className="p-8 text-center">Not an agent.</div>;
                     return <LicensesView agent={currentAgent} licenses={displayData.licenses} onAddLicense={displayData.handlers.handleAddLicense} onDeleteLicense={displayData.handlers.onDeleteLicense} />;

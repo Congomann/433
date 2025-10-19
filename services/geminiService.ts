@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { User, Client, Task, Agent, Policy, UserRole, AISuggestion, EmailDraft, Interaction, PolicyStatus, PolicyType, PolicyUnderwritingStatus } from '../types';
+import { User, Client, Task, Agent, Policy, UserRole, AISuggestion, EmailDraft, Interaction, PolicyStatus, PolicyType, PolicyUnderwritingStatus, AICallAnalysis, AICallLog } from '../types';
 
 // FIX: Per @google/genai guidelines, the API key must be obtained directly from the environment variable.
 // Fallbacks and warnings are removed as the key is assumed to be configured.
@@ -263,12 +263,12 @@ export const analyzeOnboardingDocument = async (base64Image: string, mimeType: s
     }
 };
 
-export const summarizeOnboardingConversation = async (transcript: string): Promise<any> => {
+export const summarizeOnboardingConversation = async (callDetails: string): Promise<any> => {
     try {
-        const prompt = `You are an expert insurance agent assistant. Analyze the following follow-up call transcript between an agent and a lead. Your goal is to extract key outcomes and structure it as a JSON object for the CRM.
+        const prompt = `You are an expert insurance agent assistant. Analyze the following notes and/or transcript from a follow-up call between an agent and a lead. Your goal is to extract key outcomes and structure it as a JSON object for the CRM.
 
-        Transcript:
-        ${transcript}
+        Call Details:
+        ${callDetails}
 
         Based on the conversation, provide a summary covering the following points:
         1.  **Call Synopsis:** A brief, one-paragraph summary of the conversation's purpose and outcome.
@@ -351,4 +351,49 @@ export const analyzeEAppConfirmation = async (confirmationText: string): Promise
     console.error("Error analyzing e-app confirmation:", error);
     throw new Error("Could not analyze the provided text. Please ensure it contains policy information and try again.");
   }
+};
+
+const callAnalysisSchema = {
+    type: Type.OBJECT,
+    properties: {
+        summary: { type: Type.STRING, description: "A brief, one-paragraph summary of the call's outcome and key discussion points." },
+        sentiment: { type: Type.STRING, enum: ['Positive', 'Neutral', 'Negative'], description: "The overall sentiment of the client during the call." },
+        keywords: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of 5-7 key topics or keywords discussed (e.g., 'IUL', 'premium cost', 'children's future')." },
+        actionItems: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of concrete next steps for the agent (e.g., 'Send IUL illustration', 'Follow up on Friday')." }
+    },
+    required: ["summary", "sentiment", "keywords", "actionItems"]
+};
+
+export const analyzeCallRecording = async (callLog: { intent: string, status: string }): Promise<AICallAnalysis> => {
+    try {
+        const prompt = `You are an AI assistant that analyzes call recordings for an insurance agency. Based on the following call summary, generate a structured analysis. The call has already been categorized with an intent of "${callLog.intent}" and a status of "${callLog.status}".
+
+        Your task is to expand on this by providing a detailed summary, client sentiment, keywords, and actionable next steps for the agent.
+
+        Example Output for an "Interested" client:
+        - Summary: "The client, John Smith, expressed strong interest in a life insurance policy after a quote was provided. He is concerned about protecting his family's future and asked about the differences between term and whole life."
+        - Sentiment: "Positive"
+        - Keywords: ["life insurance", "quote", "family protection", "term life", "whole life"]
+        - Action Items: ["Send a comparison of Term vs. Whole Life", "Schedule a follow-up call for Tuesday to review options."]
+
+        Now, analyze this call:
+        - Intent: ${callLog.intent}
+        - Status/Notes: ${callLog.status}
+        `;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: callAnalysisSchema,
+            },
+        });
+        
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText);
+    } catch (error) {
+        console.error("Error analyzing call recording:", error);
+        throw new Error("Failed to generate call analysis.");
+    }
 };

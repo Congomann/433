@@ -19,30 +19,49 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
   const [selectedColor, setSelectedColor] = useState(NOTE_COLORS[0].name);
   const [editingNote, setEditingNote] = useState<CalendarNote | null>(null);
 
+  // State for new fields
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [reason, setReason] = useState('');
+
   useEffect(() => {
     if (!isOpen) {
       setNewNoteText('');
       setSelectedColor(NOTE_COLORS[0].name);
       setEditingNote(null);
+      // reset new fields
+      setName('');
+      setPhone('');
+      setEmail('');
+      setReason('');
     }
   }, [isOpen]);
 
   const handleSave = () => {
     if (editingNote) {
-      if (editingNote.text.trim() === '') return;
+      if (!editingNote.reason?.trim()) return;
       onSave({ ...editingNote });
     } else {
-      if (newNoteText.trim() === '') return;
+      if (!reason.trim()) return;
       onSave({
         date: selectedDate.toISOString().split('T')[0],
         text: newNoteText,
         color: selectedColor,
         userId: currentUser.id,
+        name,
+        phone,
+        email,
+        reason,
       });
     }
     setNewNoteText('');
     setSelectedColor(NOTE_COLORS[0].name);
     setEditingNote(null);
+    setName('');
+    setPhone('');
+    setEmail('');
+    setReason('');
   };
 
   const getUserById = (id: number) => users.find(u => u.id === id);
@@ -64,14 +83,27 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
     return (
       <div className={`p-3 rounded-lg ${color?.bg || 'bg-slate-100'}`}>
         {isEditingThis ? (
-          <textarea
-            value={editingNote.text}
-            onChange={(e) => setEditingNote(prev => prev ? { ...prev, text: e.target.value } : null)}
-            className="w-full p-2 border border-slate-300 rounded-md"
-            rows={3}
-          />
+          <div className="space-y-2">
+              <input type="text" placeholder="Reason*" value={editingNote.reason || ''} onChange={(e) => setEditingNote(prev => prev ? { ...prev, reason: e.target.value } : null)} className="w-full p-2 border border-slate-300 rounded-md text-sm" />
+              <input type="text" placeholder="Name" value={editingNote.name || ''} onChange={(e) => setEditingNote(prev => prev ? { ...prev, name: e.target.value } : null)} className="w-full p-2 border border-slate-300 rounded-md text-sm" />
+              <input type="text" placeholder="Phone" value={editingNote.phone || ''} onChange={(e) => setEditingNote(prev => prev ? { ...prev, phone: e.target.value } : null)} className="w-full p-2 border border-slate-300 rounded-md text-sm" />
+              <input type="email" placeholder="Email" value={editingNote.email || ''} onChange={(e) => setEditingNote(prev => prev ? { ...prev, email: e.target.value } : null)} className="w-full p-2 border border-slate-300 rounded-md text-sm" />
+              <textarea
+                  value={editingNote.text}
+                  onChange={(e) => setEditingNote(prev => prev ? { ...prev, text: e.target.value } : null)}
+                  className="w-full p-2 border border-slate-300 rounded-md text-sm"
+                  rows={2}
+                  placeholder="Additional notes..."
+              />
+          </div>
         ) : (
-          <p className="text-slate-800 whitespace-pre-wrap">{note.text}</p>
+          <div>
+            <p className="font-bold text-slate-900">{note.reason || 'Note'}</p>
+            {note.name && <p className="text-sm text-slate-700">With: {note.name}</p>}
+            {note.phone && <p className="text-sm text-slate-700">Phone: {note.phone}</p>}
+            {note.email && <p className="text-sm text-slate-700">Email: {note.email}</p>}
+            {note.text && <p className="mt-2 text-slate-800 whitespace-pre-wrap text-sm">{note.text}</p>}
+          </div>
         )}
         <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300/50">
           <div className="flex items-center">
@@ -116,14 +148,22 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
 
         {!editingNote && (
           <div className="border-t border-slate-200 pt-4">
-            <h3 className="text-lg font-semibold text-slate-800 mb-2">Add a new note</h3>
-            <textarea
-              value={newNoteText}
-              onChange={(e) => setNewNoteText(e.target.value)}
-              placeholder="Write your note here..."
-              className="w-full p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              rows={3}
-            />
+            <h3 className="text-lg font-semibold text-slate-800 mb-2">Add New Appointment / Note</h3>
+            <div className="space-y-3">
+                <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for note (e.g., Client Callback)*" className="w-full p-2 border border-slate-300 rounded-md" />
+                <div className="grid grid-cols-2 gap-3">
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="w-full p-2 border border-slate-300 rounded-md" />
+                    <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="w-full p-2 border border-slate-300 rounded-md" />
+                </div>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full p-2 border border-slate-300 rounded-md" />
+                <textarea
+                    value={newNoteText}
+                    onChange={(e) => setNewNoteText(e.target.value)}
+                    placeholder="Additional notes..."
+                    className="w-full p-2 border border-slate-300 rounded-md"
+                    rows={2}
+                />
+            </div>
             <div className="flex justify-between items-center mt-3">
               <div className="flex items-center space-x-2">
                 <TagIcon className="text-slate-500" />
@@ -139,7 +179,7 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
               </div>
               <button
                 onClick={handleSave}
-                disabled={!newNoteText.trim()}
+                disabled={!reason.trim()}
                 className="flex items-center bg-primary-600 text-white font-semibold px-4 py-2 rounded-md shadow-sm hover:bg-primary-500 disabled:bg-slate-400 button-press"
               >
                 <PlusIcon className="w-5 h-5 mr-2" /> Add Note

@@ -1,9 +1,41 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Client, Interaction, InteractionType, ClientStatus, Agent, User } from '../types';
-import { PhoneIcon, SearchIcon, UserCircleIcon, CheckCircleIcon, AiSparklesIcon, PhoneHangupIcon, PlusIcon } from './icons';
+import { PhoneIcon, SearchIcon, UserCircleIcon, CheckCircleIcon, AiSparklesIcon, PhoneHangupIcon, PlusIcon, MicrophoneIcon } from './icons';
 import { useToast } from '../contexts/ToastContext';
-import { summarizeNotes } from '../services/geminiService';
-import * as apiClient from '../services/apiClient';
+import { summarizeOnboardingConversation } from '../services/geminiService';
+import { GoogleGenAI, LiveSession, LiveServerMessage, Modality, Blob } from "@google/genai";
+
+// --- Helper functions for Audio Processing ---
+function encode(bytes: Uint8Array) {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+function decode(base64: string) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+async function decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+  }
+  return buffer;
+}
+
 
 interface AICallAssistantViewProps {
   clients: Client[];
@@ -27,25 +59,29 @@ const Waveform: React.FC = () => (
 
 
 const AICallAssistantView: React.FC<AICallAssistantViewProps> = ({ clients, onSaveInteraction, onNavigate, onUpdateClient, onAddLead, agent }) => {
-    const [callStatus, setCallStatus] = useState<'idle' | 'pre-call' | 'dialing' | 'active' | 'summarizing' | 'complete'>('idle');
+    const [callStatus, setCallStatus] = useState<'idle' | 'pre-call' | 'connecting' | 'active' | 'summarizing' | 'complete'>('idle');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-    const [editablePhoneNumber, setEditablePhoneNumber] = useState('');
-    const [agentPhoneNumber, setAgentPhoneNumber] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const { addToast } = useToast();
     
     // Call state
-    const [callSid, setCallSid] = useState<string | null>(null);
     const [callNotes, setCallNotes] = useState('');
     const [summary, setSummary] = useState<any | null>(null);
-    const [callDuration, setCallDuration] = useState(0);
-    const callTimerRef = useRef<number | null>(null);
+    const [transcript, setTranscript] = useState<{ speaker: 'user' | 'model'; text: string }[]>([]);
+    const transcriptEndRef = useRef<HTMLDivElement>(null);
 
+    // Gemini Live API state
+    const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.API_KEY! }), []);
+    const sessionPromiseRef = useRef<Promise<LiveSession> | null>(null);
+    const inputAudioContextRef = useRef<AudioContext | null>(null);
+    const outputAudioContextRef = useRef<AudioContext | null>(null);
+    const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+    const mediaStreamRef = useRef<MediaStream | null>(null);
+    const [isConversationActive, setIsConversationActive] = useState(false);
+    
     useEffect(() => {
-        return () => {
-            if (callTimerRef.current) clearInterval(callTimerRef.current);
-        };
-    }, []);
+        transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [transcript]);
 
     const leads = useMemo(() => clients.filter(c => c.status === ClientStatus.LEAD || c.status === ClientStatus.ACTIVE), [clients]);
 
@@ -55,78 +91,129 @@ const AICallAssistantView: React.FC<AICallAssistantViewProps> = ({ clients, onSa
             lead.email.toLowerCase().includes(searchTerm.toLowerCase())
         ), [leads, searchTerm]
     );
+
+    const cleanupAudio = useCallback(() => {
+        sessionPromiseRef.current?.then(session => session.close());
+        sessionPromiseRef.current = null;
+    
+        scriptProcessorRef.current?.disconnect();
+        scriptProcessorRef.current = null;
+    
+        mediaStreamRef.current?.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+    
+        if (inputAudioContextRef.current && inputAudioContextRef.current.state !== 'closed') {
+            inputAudioContextRef.current.close().catch(console.error);
+        }
+        if (outputAudioContextRef.current && outputAudioContextRef.current.state !== 'closed') {
+            outputAudioContextRef.current.close().catch(console.error);
+        }
+    
+        setIsConversationActive(false);
+    }, []);
+
+    useEffect(() => {
+        return () => cleanupAudio();
+    }, [cleanupAudio]);
     
     const handleSelectClient = (client: Client) => {
         setSelectedClient(client);
-        setEditablePhoneNumber(client.phone || '');
-        setAgentPhoneNumber(agent.phone || '');
         setCallStatus('pre-call');
     };
 
     const handleBackToSelection = () => {
+        cleanupAudio();
         setSelectedClient(null);
         setCallStatus('idle');
         setCallNotes('');
         setSummary(null);
-        setCallDuration(0);
+        setTranscript([]);
     };
 
     const handleStartCall = async () => {
-        if (!selectedClient || !agentPhoneNumber.trim() || !editablePhoneNumber.trim()) {
-            addToast('Missing Information', 'Both your phone number and the client\'s phone number are required.', 'warning');
-            return;
-        }
+        if (!selectedClient) return;
 
-        setCallStatus('dialing');
+        setCallStatus('connecting');
+        setTranscript([]);
+        let nextStartTime = 0;
+        const sources = new Set<AudioBufferSourceNode>();
 
-        if (editablePhoneNumber !== selectedClient.phone) {
-            try {
-                await onUpdateClient(selectedClient.id, { phone: editablePhoneNumber });
-                addToast('Client Updated', 'Client phone number has been updated.', 'success');
-            } catch (error) {
-                addToast('Update Failed', 'Could not update client phone number.', 'error');
-                setCallStatus('pre-call');
-                return;
-            }
-        }
-        
         try {
-            // Simulate dialing agent first
-            await new Promise(res => setTimeout(res, 1500));
-            setCallStatus('active');
-            const { callSid } = await apiClient.startPstnCall({ agentPhone: agentPhoneNumber, clientPhone: editablePhoneNumber });
-            setCallSid(callSid);
-            callTimerRef.current = window.setInterval(() => setCallDuration(d => d + 1), 1000);
+            inputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+            outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaStreamRef.current = stream;
+
+            sessionPromiseRef.current = ai.live.connect({
+                model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+                callbacks: {
+                    onopen: () => {
+                        const source = inputAudioContextRef.current!.createMediaStreamSource(stream);
+                        scriptProcessorRef.current = inputAudioContextRef.current!.createScriptProcessor(4096, 1, 1);
+                        scriptProcessorRef.current.onaudioprocess = (audioProcessingEvent) => {
+                            const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+                            const pcmBlob: Blob = { data: encode(new Uint8Array(new Int16Array(inputData.map(x => x * 32768)).buffer)), mimeType: 'audio/pcm;rate=16000' };
+                            sessionPromiseRef.current?.then((session) => session.sendRealtimeInput({ media: pcmBlob }));
+                        };
+                        source.connect(scriptProcessorRef.current);
+                        scriptProcessorRef.current.connect(inputAudioContextRef.current!.destination);
+                        setCallStatus('active');
+                        setIsConversationActive(true);
+                    },
+                    onmessage: async (message: LiveServerMessage) => {
+                         if (message.serverContent?.outputTranscription) {
+                            setTranscript(prev => [...prev, { speaker: 'model', text: message.serverContent!.outputTranscription!.text }]);
+                        } else if (message.serverContent?.inputTranscription) {
+                            setTranscript(prev => [...prev, { speaker: 'user', text: message.serverContent!.inputTranscription!.text }]);
+                        }
+                        
+                        const audio = message.serverContent?.modelTurn?.parts[0]?.inlineData.data;
+                        if (audio && outputAudioContextRef.current) {
+                            nextStartTime = Math.max(nextStartTime, outputAudioContextRef.current.currentTime);
+                            const audioBuffer = await decodeAudioData(decode(audio), outputAudioContextRef.current, 24000, 1);
+                            const source = outputAudioContextRef.current.createBufferSource();
+                            source.buffer = audioBuffer;
+                            source.connect(outputAudioContextRef.current.destination);
+                            source.addEventListener('ended', () => sources.delete(source));
+                            source.start(nextStartTime);
+                            nextStartTime += audioBuffer.duration;
+                            sources.add(source);
+                        }
+                    },
+                    onerror: (e: ErrorEvent) => { addToast('Conversation Error', 'An error occurred. Please try again.', 'error'); cleanupAudio(); setCallStatus('pre-call'); },
+                    onclose: () => { setIsConversationActive(false); }
+                },
+                config: {
+                    responseModalities: [Modality.AUDIO],
+                    outputAudioTranscription: {},
+                    inputAudioTranscription: {},
+                    systemInstruction: `You are simulating a client named ${selectedClient.firstName} ${selectedClient.lastName}. You are speaking with an insurance agent. Be helpful but ask relevant questions. Client context: has a family, interested in life insurance, and may have questions about policy types.`,
+                }
+            });
+
         } catch (error) {
-            addToast('Call Failed', 'Could not initiate the call.', 'error');
+            addToast('Microphone Error', 'Could not access your microphone. Please grant permission.', 'error');
             setCallStatus('pre-call');
         }
     };
+    
+    const handleEndCall = useCallback(async () => {
+        cleanupAudio();
+        handleGenerateSummary();
+    }, [callNotes, transcript]);
 
-    const handleEndCall = async () => {
-        if (callTimerRef.current) clearInterval(callTimerRef.current);
-        if (callSid) {
-            try {
-                await apiClient.endPstnCall({ callSid });
-            } catch (error) {
-                console.error("Failed to formally end call on backend", error);
-            }
-        }
-        setCallStatus('complete');
-    };
-
-    const handleSummarizeNotes = async () => {
-        if (!callNotes.trim()) {
-            addToast('No Notes', 'There are no notes to summarize.', 'info');
-            return;
-        }
+    const handleGenerateSummary = async () => {
         setCallStatus('summarizing');
+        const fullConversation = transcript.map(t => `${t.speaker === 'user' ? 'Agent' : 'Client'}: ${t.text}`).join('\n');
+        const notesToSummarize = `Conversation Transcript:\n${fullConversation}\n\nAgent's Manual Notes:\n${callNotes}`;
+        
         try {
-            const result = await summarizeNotes(callNotes);
-            setSummary({ profileSummary: result });
+            const result = await summarizeOnboardingConversation(notesToSummarize);
+            setSummary(result);
             addToast('Summary Generated', 'AI summary is ready.', 'success');
         } catch (error) {
-            addToast('Summarization Failed', 'Could not generate summary.', 'error');
+            addToast('Summarization Failed', 'Could not generate summary from the conversation.', 'error');
         } finally {
             setCallStatus('complete');
         }
@@ -136,20 +223,29 @@ const AICallAssistantView: React.FC<AICallAssistantViewProps> = ({ clients, onSa
         if (!selectedClient) return;
         
         const interactions: Omit<Interaction, 'id'|'clientId'>[] = [];
+        const fullConversationText = transcript.map(t => `${t.speaker === 'user' ? 'Agent' : 'Client'}: ${t.text}`).join('\n');
 
-        if (callNotes.trim()) {
+        if (fullConversationText.trim()) {
             interactions.push({
                 type: InteractionType.CALL,
                 date: new Date().toISOString().split('T')[0],
-                summary: `Call Notes:\n\n${callNotes}`
+                summary: `Live Call Transcript:\n\n${fullConversationText}`
             });
         }
         
-        if (summary?.profileSummary) {
+        if (callNotes.trim()) {
+             interactions.push({
+                type: InteractionType.NOTE,
+                date: new Date().toISOString().split('T')[0],
+                summary: `Manual Call Notes:\n\n${callNotes}`
+            });
+        }
+
+        if (summary) {
             interactions.push({
                 type: InteractionType.NOTE,
                 date: new Date().toISOString().split('T')[0],
-                summary: `AI Call Summary:\n\n${summary.profileSummary}`
+                summary: `AI Call Summary:\n\n${summary.profileSummary}\n\nNext Steps:\n- ${summary.nextSteps?.join('\n- ')}`
             });
         }
         
@@ -164,7 +260,7 @@ const AICallAssistantView: React.FC<AICallAssistantViewProps> = ({ clients, onSa
         return (
             <div className="p-10 page-enter">
                 <h1 className="text-4xl font-extrabold text-slate-800 mb-2">AI Call Assistant</h1>
-                <p className="text-slate-500 mb-8">Select a client or lead to place a call.</p>
+                <p className="text-slate-500 mb-8">Select a client to start a live voice conversation.</p>
                 <div className="flex items-center gap-4 mb-6">
                     <div className="relative flex-grow max-w-md">
                         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -189,46 +285,50 @@ const AICallAssistantView: React.FC<AICallAssistantViewProps> = ({ clients, onSa
     return (
         <div className="p-10 page-enter">
             <button onClick={handleBackToSelection} className="text-primary-600 hover:underline mb-8">&larr; Back to Client Selection</button>
-            <div className="max-w-3xl mx-auto">
+            <div className="max-w-4xl mx-auto">
                 <div className="bg-white/70 backdrop-blur-lg rounded-2xl border border-white/50 shadow-premium p-8">
                     {/* Pre-Call State */}
                     {callStatus === 'pre-call' && selectedClient && (
                          <div className="text-center py-10 animate-scale-in">
                             <UserCircleIcon className="w-24 h-24 text-slate-300 mx-auto" />
                             <h3 className="text-2xl font-bold text-slate-800 mt-4">{selectedClient.firstName} {selectedClient.lastName}</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-lg mx-auto mt-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Phone Number</label>
-                                    <input type="tel" value={agentPhoneNumber} onChange={(e) => setAgentPhoneNumber(e.target.value)} className="w-full text-center text-lg font-semibold text-slate-800 bg-white border border-slate-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Client's Phone Number</label>
-                                    <input type="tel" value={editablePhoneNumber} onChange={(e) => setEditablePhoneNumber(e.target.value)} className="w-full text-center text-lg font-semibold text-slate-800 bg-white border border-slate-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:outline-none" />
-                                </div>
-                            </div>
-                            <p className="text-slate-600 mt-6 max-w-md mx-auto text-sm">The system will call your number first, then connect you to the client.</p>
+                            <p className="text-slate-500 mt-1">Ready to start a live voice conversation?</p>
                             <button onClick={handleStartCall} className="bg-emerald-600 text-white font-bold px-6 py-3 rounded-lg shadow-lg hover:bg-emerald-700 transition-transform hover:scale-105 button-press flex items-center mx-auto mt-6">
-                                <PhoneIcon className="w-6 h-6 mr-2" /> Start Call
+                                <MicrophoneIcon className="w-6 h-6 mr-2" /> Start Conversation
                             </button>
                         </div>
                     )}
                     
                     {/* Active Call States */}
-                    {(callStatus === 'dialing' || callStatus === 'active') && selectedClient && (
+                    {(callStatus === 'connecting' || callStatus === 'active') && selectedClient && (
                         <div>
                             <div className="text-center">
-                                <p className="text-slate-500">{callStatus === 'dialing' ? 'Dialing your phone...' : `On call with`}</p>
+                                <p className="text-slate-500">Live conversation with</p>
                                 <h2 className="text-3xl font-bold text-slate-800">{selectedClient.firstName} {selectedClient.lastName}</h2>
-                                <div className="font-mono text-2xl text-slate-700 mt-2">{String(Math.floor(callDuration / 60)).padStart(2, '0')}:{String(callDuration % 60).padStart(2, '0')}</div>
-                                {callStatus === 'active' && <Waveform />}
+                                {callStatus === 'active' ? (
+                                    <div className="mt-2 h-14"><Waveform /></div>
+                                ) : (
+                                    <div className="mt-2 text-slate-600 h-14 flex items-center justify-center">
+                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-700 mr-3"></div>
+                                        Connecting...
+                                    </div>
+                                )}
                             </div>
-                            <div className="mt-6">
-                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Call Notes</label>
-                                <textarea value={callNotes} onChange={(e) => setCallNotes(e.target.value)} rows={8} className="w-full p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white/50" placeholder="Type your notes here..."></textarea>
+                            <div className="mt-6 grid grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Live Transcript</label>
+                                    <div ref={transcriptEndRef} className="h-64 p-3 bg-slate-100/70 border border-slate-200/80 rounded-lg overflow-y-auto text-sm space-y-2">
+                                        {transcript.map((t, i) => <p key={i}><strong className={t.speaker === 'user' ? 'text-primary-700' : 'text-slate-700'}>{t.speaker === 'user' ? 'You:' : `${selectedClient.firstName}:`}</strong> {t.text}</p>)}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Manual Notes</label>
+                                    <textarea value={callNotes} onChange={(e) => setCallNotes(e.target.value)} rows={10} className="w-full p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white/50" placeholder="Type your notes here..."></textarea>
+                                </div>
                             </div>
                             <div className="flex justify-center mt-6">
-                                <button onClick={handleEndCall} className="bg-rose-600 text-white w-16 h-16 flex items-center justify-center rounded-full shadow-lg hover:bg-rose-700 transition-transform hover:scale-105 button-press">
-                                    <PhoneHangupIcon className="w-8 h-8" />
+                                <button onClick={handleEndCall} className="bg-rose-600 text-white font-bold px-6 py-3 rounded-lg shadow-lg hover:bg-rose-700 transition-transform hover:scale-105 button-press flex items-center">
+                                    <PhoneHangupIcon className="w-6 h-6 mr-2" /> End & Summarize
                                 </button>
                             </div>
                         </div>
@@ -238,26 +338,35 @@ const AICallAssistantView: React.FC<AICallAssistantViewProps> = ({ clients, onSa
                     {(callStatus === 'summarizing' || callStatus === 'complete') && selectedClient && (
                          <div>
                             <h2 className="text-2xl font-bold text-slate-800 mb-4">Post-Call Summary</h2>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Call Notes</label>
-                                    <textarea value={callNotes} onChange={(e) => setCallNotes(e.target.value)} rows={6} className="w-full p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white/50"></textarea>
+                            {callStatus === 'summarizing' && (
+                                <div className="text-center py-10">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                                    <p className="text-slate-600">AI is summarizing your conversation...</p>
                                 </div>
-                                <button onClick={handleSummarizeNotes} disabled={callStatus === 'summarizing'} className="flex items-center bg-primary-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-primary-700 disabled:bg-slate-400">
-                                    {callStatus === 'summarizing' ? 'Summarizing...' : <><AiSparklesIcon className="w-5 h-5 mr-2" /> AI Summarize Notes</>}
-                                </button>
-                                {summary && (
-                                    <div className="animate-scale-in">
-                                        <label className="block text-sm font-medium text-slate-700 mb-1.5">AI-Generated Summary</label>
-                                        <div className="p-3 bg-slate-100/80 rounded-lg border border-slate-200/80 prose prose-sm max-w-none">
-                                            <p>{summary.profileSummary}</p>
+                            )}
+                            {callStatus === 'complete' && (
+                                <div className="space-y-4 animate-scale-in">
+                                    {summary ? (
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1.5">AI-Generated Summary</label>
+                                            <div className="p-4 bg-slate-100/80 rounded-lg border border-slate-200/80 prose prose-sm max-w-none">
+                                                <h4>Summary</h4>
+                                                <p>{summary.profileSummary}</p>
+                                                <h4>Next Steps</h4>
+                                                <ul>{summary.nextSteps.map((step: string, i: number) => <li key={i}>{step}</li>)}</ul>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex justify-end mt-8">
+                                    ) : (
+                                        <p className="text-center text-slate-500 bg-slate-100 p-4 rounded-lg">No summary could be generated from the conversation.</p>
+                                    )}
+                                </div>
+                            )}
+                            <div className="flex justify-between mt-8">
+                                <button onClick={handleBackToSelection} className="bg-slate-200 text-slate-700 font-semibold px-6 py-2 rounded-lg hover:bg-slate-300 button-press">
+                                    Make Another Call
+                                </button>
                                 <button onClick={handleSaveAndExit} className="bg-emerald-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-emerald-700 button-press flex items-center">
-                                    <CheckCircleIcon className="w-5 h-5 mr-2" /> Save Notes & Exit
+                                    <CheckCircleIcon className="w-5 h-5 mr-2" /> Save & Exit
                                 </button>
                             </div>
                          </div>
