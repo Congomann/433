@@ -27,7 +27,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
   const [isSyncing, setIsSyncing] = useState(false);
   const [googleEvents, setGoogleEvents] = useState<CalendarEvent[]>([]);
 
-  const canMarkDayOff = [UserRole.ADMIN, UserRole.SUB_ADMIN, UserRole.MANAGER, UserRole.UNDERWRITING].includes(currentUser.role);
+  const canMarkDayOff = [UserRole.ADMIN, UserRole.SUB_ADMIN, UserRole.MANAGER, UserRole.UNDERWRITING, UserRole.AGENT].includes(currentUser.role);
   
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');

@@ -89,3 +89,23 @@ export const markConversationAsRead = async (conversationId: string, currentUser
         console.error("Error marking conversation as read:", error);
     }
 };
+
+/**
+ * "Deletes" a message by updating its content to indicate deletion.
+ * This is a soft delete; the document remains but its content is changed.
+ * @param conversationId The ID of the conversation containing the message.
+ * @param messageId The ID of the message to delete.
+ */
+export const deleteMessage = async (conversationId: string, messageId: string): Promise<void> => {
+    const messageRef = doc(db, 'conversations', conversationId, 'messages', messageId);
+    try {
+        await updateDoc(messageRef, {
+            messageText: 'This message was deleted',
+            isDeleted: true
+        });
+    } catch (error) {
+        console.error("Error deleting message:", error);
+        // Propagate the error so the UI can handle it
+        throw new Error("Could not delete the message.");
+    }
+};

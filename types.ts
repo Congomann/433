@@ -218,6 +218,7 @@ export interface Message {
   senderId: number;
   messageText: string;
   timestamp: Date;
+  isDeleted?: boolean;
 }
 
 export interface Conversation {
