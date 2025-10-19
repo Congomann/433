@@ -44,6 +44,7 @@ import UnderwritingReviewModal from './components/UnderwritingReviewModal';
 import CarrierEAppsView from './components/CarrierEAppsView';
 import TrainingView from './components/TrainingView';
 import AgentLeaderboard from './components/AgentLeaderboard';
+import NewBusinessView from './components/NewBusinessView';
 
 
 // =============================================================================
@@ -465,6 +466,7 @@ const App: React.FC = () => {
                     if (!currentAgent) return <div className="p-8">Agent profile not found. Call assistant is unavailable.</div>;
                     return <AICallAssistantView currentUser={displayUser!} agent={currentAgent} clients={displayData.clients} onSaveInteraction={displayData.handlers.handleSaveInteraction} onNavigate={handleNavigate} onUpdateClient={displayData.handlers.handleUpdateClient} onAddLead={handleOpenCreateLead} />;
                 case 'ai-call-logs': return <AICallLogsView aiCallLogs={displayData.aiCallLogs} />;
+                case 'new-business': return <NewBusinessView clients={displayData.clients} onSavePolicy={displayData.handlers.handleSavePolicy} />;
                 case 'carrier-e-apps': return <CarrierEAppsView clients={displayData.clients} onSavePolicy={displayData.handlers.handleSavePolicy} />;
                 case 'training': return <TrainingView />;
                 case 'leaderboard': return <AgentLeaderboard agents={displayData.agents} clients={displayData.clients} policies={displayData.policies} />;

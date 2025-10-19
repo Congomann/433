@@ -64,6 +64,7 @@ const navConfig = {
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     { id: 'ai-assistant', label: 'AI Assistant', icon: <AiSparklesIcon /> },
     { id: 'ai-call-assistant', label: 'AI Call Assistant', icon: <PhoneIcon /> },
+    { id: 'new-business', label: 'New Business', icon: <RocketLaunchIcon /> },
     { id: 'carrier-e-apps', label: 'Carrier E-Apps', icon: <RocketLaunchIcon /> },
     { id: 'clients', label: 'My Clients', icon: <ClientsIcon /> },
     { id: 'tasks', label: 'My Tasks', icon: <TasksIcon /> },

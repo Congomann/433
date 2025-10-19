@@ -236,18 +236,23 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ currentUser, agents, 
 
   const agentPerformanceData = useMemo(() => {
     return agents.map(agent => {
-        const agentClientIds = clients.filter(c => c.agentId === agent.id).map(c => c.id);
+        const agentClients = clients.filter(c => c.agentId === agent.id);
+        const agentClientIds = agentClients.map(c => c.id);
         const agentPolicies = policies.filter(p => agentClientIds.includes(p.clientId) && p.status === 'Active');
         const totalPremium = agentPolicies.reduce((sum, p) => sum + p.annualPremium, 0);
-        return { ...agent, totalPremium };
+        return { 
+            ...agent, 
+            totalPremium,
+            clientCount: agentClients.length, // Ensure client count is up-to-date
+        };
     });
   }, [agents, clients, policies]);
 
   const { activeAgents, pendingAgents, inactiveAgents } = useMemo(() => {
-    const grouped = {
-      [AgentStatus.ACTIVE]: [] as (Agent & { totalPremium: number })[],
-      [AgentStatus.PENDING]: [] as (Agent & { totalPremium: number })[],
-      [AgentStatus.INACTIVE]: [] as (Agent & { totalPremium: number })[],
+    const grouped: { [key in AgentStatus]: (Agent & { totalPremium: number })[] } = {
+      [AgentStatus.ACTIVE]: [],
+      [AgentStatus.PENDING]: [],
+      [AgentStatus.INACTIVE]: [],
     };
 
     agentPerformanceData.forEach(agent => {

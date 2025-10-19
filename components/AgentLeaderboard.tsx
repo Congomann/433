@@ -39,7 +39,12 @@ const AgentLeaderboard: React.FC<AgentLeaderboardProps> = ({ agents, clients, po
       };
     });
 
-    return performanceData.sort((a, b) => b.approvedPoliciesCount - a.approvedPoliciesCount);
+    return performanceData.sort((a, b) => {
+        if (b.totalPremium !== a.totalPremium) {
+            return b.totalPremium - a.totalPremium;
+        }
+        return b.approvedPoliciesCount - a.approvedPoliciesCount;
+    });
   }, [agents, clients, policies]);
 
   const getRankIndicator = (rank: number) => {
@@ -62,7 +67,7 @@ const AgentLeaderboard: React.FC<AgentLeaderboardProps> = ({ agents, clients, po
         <TrophyIcon className="w-10 h-10 text-primary-600 mr-4" />
         <div>
           <h1 className="text-4xl font-extrabold text-slate-800">Agent Leaderboard</h1>
-          <p className="text-slate-500 mt-1">Ranking agents by total number of approved policies.</p>
+          <p className="text-slate-500 mt-1">Ranking agents by total Annual Premium (AP) sold.</p>
         </div>
       </div>
 
