@@ -119,6 +119,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, onOpe
       />
       <MessagingChatWindow
         currentUser={currentUser}
+        users={users}
         activeConversation={activeConversation}
         messages={messages}
         isMessagesLoading={isMessagesLoading}

@@ -23,6 +23,7 @@ const navConfig = {
     { id: 'ai-call-logs', label: 'AI Call Logs', icon: <PhoneIcon /> },
     { id: 'clients', label: 'Clients', icon: <ClientsIcon /> },
     { id: 'agents', label: 'Agents', icon: <ClientsIcon /> },
+    { id: 'leaderboard', label: 'Leaderboard', icon: <TrophyIcon /> },
     { id: 'tasks', label: 'Tasks', icon: <TasksIcon /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'training', label: 'Training', icon: <TrophyIcon /> },
@@ -32,6 +33,7 @@ const navConfig = {
   [UserRole.MANAGER]: [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     { id: 'manager-portal', label: 'Manager Portal', icon: <TrophyIcon /> },
+    { id: 'leaderboard', label: 'Leaderboard', icon: <TrophyIcon /> },
     { id: 'agents', label: 'Manage Agents', icon: <UsersIcon /> },
     { id: 'clients', label: 'View Clients', icon: <ClientsIcon /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
@@ -52,6 +54,7 @@ const navConfig = {
     { id: 'ai-call-assistant', label: 'AI Call Assistant', icon: <PhoneIcon /> },
     { id: 'ai-call-logs', label: 'AI Call Logs', icon: <PhoneIcon /> },
     { id: 'leads', label: 'Lead Distribution', icon: <ClientsIcon /> },
+    { id: 'leaderboard', label: 'Leaderboard', icon: <TrophyIcon /> },
     { id: 'agents', label: 'View Agents', icon: <UsersIcon /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'training', label: 'Training', icon: <TrophyIcon /> },

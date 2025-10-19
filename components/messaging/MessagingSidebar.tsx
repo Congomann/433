@@ -31,8 +31,6 @@ const MessagingSidebar: React.FC<MessagingSidebarProps> = ({ currentUser, users,
   const [searchTerm, setSearchTerm] = useState('');
 
   const { sortedConversations, otherContacts } = useMemo(() => {
-    const internalStaffRoles = [UserRole.ADMIN, UserRole.SUB_ADMIN, UserRole.AGENT, UserRole.MANAGER, UserRole.UNDERWRITING];
-    
     const conversationList = conversations.map(conv => {
       const otherUserId = conv.participantIds.find(id => id !== currentUser.id);
       const otherUserInfo = otherUserId ? conv.participantInfo[otherUserId] : null;
@@ -45,18 +43,31 @@ const MessagingSidebar: React.FC<MessagingSidebarProps> = ({ currentUser, users,
       };
     }).filter(conv => conv.otherUser); // Filter out conversations where other user might not exist
 
-    // Sort by unread, then by timestamp
+    // Sort by unread status first, then by timestamp
     conversationList.sort((a, b) => {
-      if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
-      if (b.unreadCount > 0 && a.unreadCount === 0) return 1;
-      return (b.lastMessageTimestamp?.getTime() || 0) - (a.lastMessageTimestamp?.getTime() || 0);
+      const aIsUnread = a.unreadCount > 0;
+      const bIsUnread = b.unreadCount > 0;
+  
+      // Primary sort criteria: unread status (unread conversations on top)
+      if (aIsUnread && !bIsUnread) {
+        return -1; // a comes first
+      }
+      if (!aIsUnread && bIsUnread) {
+        return 1; // b comes first
+      }
+  
+      // Secondary sort criteria: timestamp (descending)
+      // This applies within both groups (unread vs unread, and read vs read)
+      const timeA = a.lastMessageTimestamp?.getTime() || 0;
+      const timeB = b.lastMessageTimestamp?.getTime() || 0;
+  
+      return timeB - timeA; // Most recent first
     });
 
     const contactsInConversations = new Set(conversationList.map(c => c.otherUser?.id));
     
     const remainingContacts = users.filter(u => 
       u.id !== currentUser.id && 
-      internalStaffRoles.includes(u.role) &&
       !contactsInConversations.has(u.id)
     ).sort((a, b) => a.name.localeCompare(b.name));
 

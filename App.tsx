@@ -43,6 +43,7 @@ import DemoModeSwitcher from './components/DemoModeSwitcher';
 import UnderwritingReviewModal from './components/UnderwritingReviewModal';
 import CarrierEAppsView from './components/CarrierEAppsView';
 import TrainingView from './components/TrainingView';
+import AgentLeaderboard from './components/AgentLeaderboard';
 
 
 // =============================================================================
@@ -466,6 +467,7 @@ const App: React.FC = () => {
                 case 'ai-call-logs': return <AICallLogsView aiCallLogs={displayData.aiCallLogs} />;
                 case 'carrier-e-apps': return <CarrierEAppsView clients={displayData.clients} onSavePolicy={displayData.handlers.handleSavePolicy} />;
                 case 'training': return <TrainingView />;
+                case 'leaderboard': return <AgentLeaderboard agents={displayData.agents} clients={displayData.clients} policies={displayData.policies} />;
                 case 'manager-portal': return <ManagerPortal currentUser={displayUser!} agents={displayData.agents} clients={displayData.clients} policies={displayData.policies} onNavigate={handleNavigate} />;
                 case 'underwriting-portal': return <UnderwritingPortal policies={displayData.policies} clients={displayData.clients} agents={displayData.agents} onNavigate={handleNavigate} onReviewPolicy={handleOpenReviewModal} />;
 

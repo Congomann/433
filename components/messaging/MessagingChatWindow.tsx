@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { User, Conversation, Message } from '../../types';
 import * as messagingService from '../../services/messagingService';
 import { ArrowUpIcon, EllipsisVerticalIcon, TrashIcon } from '../icons';
@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 
 interface MessagingChatWindowProps {
   currentUser: User;
+  users: User[];
   activeConversation: Conversation | null;
   messages: Message[];
   isMessagesLoading: boolean;
@@ -28,7 +29,7 @@ const formatDateSeparator = (date: Date) => {
     return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
 
-const MessagingChatWindow: React.FC<MessagingChatWindowProps> = ({ currentUser, activeConversation, messages, isMessagesLoading }) => {
+const MessagingChatWindow: React.FC<MessagingChatWindowProps> = ({ currentUser, users, activeConversation, messages, isMessagesLoading }) => {
   const [newMessage, setNewMessage] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
@@ -42,7 +43,12 @@ const MessagingChatWindow: React.FC<MessagingChatWindowProps> = ({ currentUser, 
     }
   }, [messages, isMessagesLoading]);
 
-  const otherUser = activeConversation ? activeConversation.participantInfo[activeConversation.participantIds.find(id => id !== currentUser.id)!] : null;
+  const otherUser = useMemo(() => {
+    if (!activeConversation) return null;
+    const otherUserId = activeConversation.participantIds.find(id => id !== currentUser.id);
+    return users.find(u => u.id === otherUserId) || null;
+  }, [activeConversation, currentUser.id, users]);
+
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +64,7 @@ const MessagingChatWindow: React.FC<MessagingChatWindowProps> = ({ currentUser, 
         await messagingService.sendMessage(
             activeConversation.id,
             currentUser,
-            { ...otherUser, id: activeConversation.participantIds.find(id => id !== currentUser.id)! } as User,
+            otherUser,
             text
         );
       } catch (error) {
