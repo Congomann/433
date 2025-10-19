@@ -2,7 +2,6 @@ import * as authController from './controllers/authController';
 import * as agentsController from './controllers/agentsController';
 import * as leadsController from './controllers/leadsController';
 import * as usersController from './controllers/usersController';
-import * as messagesController from './controllers/messagesController';
 import * as dataController from './controllers/dataController';
 import * as auth from './auth';
 import { db } from './db';
@@ -47,27 +46,14 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
         return await usersController.updateMyProfile(currentUser.id, body);
     }
     
-    // Message business logic
-    if (path === '/api/messages/broadcast' && method === 'POST') {
-        return await messagesController.broadcastMessage(currentUser, body);
-    }
-    if (path === '/api/messages/mark-as-read' && method === 'PUT') {
-        return await messagesController.markConversationAsRead(currentUser, body);
-    }
-
-    const messageActionMatch = path.match(/^\/api\/messages\/(\d+)\/(trash|restore)$/);
-    if (messageActionMatch && method === 'PUT') {
-        const [, messageId, action] = messageActionMatch;
-        if (action === 'trash') {
-            return await messagesController.trashMessage(currentUser, Number(messageId));
-        }
-        if (action === 'restore') {
-            return await messagesController.restoreMessage(currentUser, Number(messageId));
-        }
-    }
-    
     if (path === '/api/notifications/mark-all-read' && method === 'PUT') {
-        return await messagesController.markAllNotificationsRead(body.userId);
+        const allNotifications = await db.getAll<Notification>('notifications');
+        for (const notification of allNotifications) {
+            if (notification.userId === body.userId && !notification.isRead) {
+                await db.updateRecord<Notification>('notifications', notification.id, { isRead: true });
+            }
+        }
+        return { success: true };
     }
 
     if (path === '/api/day-off/toggle' && method === 'POST') {
@@ -213,18 +199,6 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
                     await db.deleteRecord('calendarEvents', correspondingEvent.id);
                 }
                 return await db.deleteRecord(resource, id);
-            }
-        }
-        
-        if (resource === 'messages') {
-             if (method === 'POST') {
-                return await messagesController.sendMessage(currentUser, body);
-            }
-            if (method === 'PUT' && id) {
-                return await messagesController.editMessage(currentUser, id, body);
-            }
-            if (method === 'DELETE' && id) {
-                return await messagesController.permanentlyDeleteMessage(currentUser, id);
             }
         }
 

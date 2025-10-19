@@ -150,9 +150,13 @@ const BASE_MOCK_TASKS: Task[] = [
     { id: 3, title: 'Send birthday card to Jane Doe', dueDate: '2024-11-10', completed: true, agentId: 4, clientId: 2 }
 ];
 
+// FIX: Update message objects to match the Message interface: id is a string, timestamp is a Date,
+// text is messageText, isRead is read, and remove extraneous properties.
 const BASE_MOCK_MESSAGES: Message[] = [
-    { id: 1, senderId: 1, receiverId: 3, text: 'Welcome aboard, Kara! Let me know if you need anything.', timestamp: '2024-07-24T10:00:00Z', status: 'active', source: 'internal', isRead: true, deletedTimestamp: undefined, deletedBy: undefined },
-    { id: 2, senderId: 3, receiverId: 1, text: 'Thanks, Adama! Happy to be here.', timestamp: '2024-07-24T10:05:00Z', status: 'active', source: 'internal', isRead: true, deletedTimestamp: undefined, deletedBy: undefined }
+    // FIX: Removed `receiverId` and `read` properties to align with the `Message` interface.
+    { id: '1', senderId: 1, messageText: 'Welcome aboard, Kara! Let me know if you need anything.', timestamp: new Date('2024-07-24T10:00:00Z') },
+    // FIX: Removed `receiverId` and `read` properties to align with the `Message` interface.
+    { id: '2', senderId: 3, messageText: 'Thanks, Adama! Happy to be here.', timestamp: new Date('2024-07-24T10:05:00Z') }
 ];
 
 const BASE_MOCK_LICENSES: License[] = [
@@ -186,8 +190,8 @@ const BASE_MOCK_CHARGEBACKS: Chargeback[] = [
 ];
 
 const BASE_MOCK_AI_CALL_LOGS: AICallLog[] = [
-    { id: 'call1', name: 'John Smith', phone: '555-111-2222', intent: 'Interested', status: 'Quote provided for age 35 in TX', timestamp: '2024-07-24T14:30:00Z', callRecordingUrl: '/mock/recording1.mp3' },
-    { id: 'call2', name: 'Jane Doe', phone: '555-333-4444', intent: 'Callback Requested', status: 'Requested callback tomorrow around noon', timestamp: '2024-07-24T14:35:00Z', callRecordingUrl: '/mock/recording2.mp3' },
+    { id: 'call1', name: 'John Smith', phone: '555-111-2222', intent: 'Interested', status: 'Quote provided for age 35 in TX', timestamp: '2024-07-24T14:30:00Z', callRecordingUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3' },
+    { id: 'call2', name: 'Jane Doe', phone: '555-333-4444', intent: 'Callback Requested', status: 'Requested callback tomorrow around noon', timestamp: '2024-07-24T14:35:00Z', callRecordingUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3' },
     { id: 'call3', name: 'Peter Jones', phone: '555-555-6666', intent: 'Not Interested', status: 'Marked as Do Not Contact', timestamp: '2024-07-24T14:40:00Z' },
 ];
 

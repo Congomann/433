@@ -30,37 +30,6 @@ export const register = async (userData: Omit<User, 'id' | 'title' | 'avatar'>):
     return handleRequest('POST', '/api/auth/register', userData) as Promise<{ user: User }>;
 };
 
-
-// --- Message Methods ---
-export const sendMessage = (receiverId: number, text: string): Promise<Message> => {
-    return post<Message>('/api/messages', { receiverId, text });
-};
-
-export const editMessage = (messageId: number, text: string) => {
-    return put(`/api/messages/${messageId}`, { text });
-};
-
-export const trashMessage = (messageId: number) => {
-    return put(`/api/messages/${messageId}/trash`, {});
-};
-
-export const restoreMessage = (messageId: number) => {
-    return put(`/api/messages/${messageId}/restore`, {});
-};
-
-export const permanentlyDeleteMessage = (messageId: number) => {
-    return del(`/api/messages/${messageId}`);
-};
-
-export const broadcastMessage = (text: string) => {
-    return post('/api/messages/broadcast', { text });
-};
-
-export const markConversationAsRead = (senderId: number) => {
-    return put('/api/messages/mark-as-read', { senderId });
-};
-
-
 // --- Specific Business Logic Methods ---
 export const approveAgent = async (agentId: number, role: UserRole) => {
     return post(`/api/agents/${agentId}/approve`, { role });

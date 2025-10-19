@@ -11,7 +11,6 @@ const STORES = {
     policies: 'policies',
     interactions: 'interactions',
     tasks: 'tasks',
-    messages: 'messages',
     licenses: 'licenses',
     notifications: 'notifications',
     calendarNotes: 'calendarNotes',
@@ -66,10 +65,6 @@ export const initDB = (): Promise<IDBDatabase> => {
             if (!db.objectStoreNames.contains(STORES.tasks)) {
                  const store = db.createObjectStore(STORES.tasks, { keyPath: 'id', autoIncrement: true });
                  seedFunctions.push(() => MOCK_TASKS.forEach(item => store.add(item)));
-            }
-            if (!db.objectStoreNames.contains(STORES.messages)) {
-                 const store = db.createObjectStore(STORES.messages, { keyPath: 'id', autoIncrement: true });
-                 seedFunctions.push(() => MOCK_MESSAGES.forEach(item => store.add(item)));
             }
             if (!db.objectStoreNames.contains(STORES.licenses)) {
                  const store = db.createObjectStore(STORES.licenses, { keyPath: 'id', autoIncrement: true });

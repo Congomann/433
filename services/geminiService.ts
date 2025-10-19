@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { User, Client, Task, Agent, Policy, UserRole, AISuggestion, EmailDraft, Interaction, PolicyStatus, PolicyType, PolicyUnderwritingStatus, AICallAnalysis, AICallLog } from '../types';
 
 // FIX: Per @google/genai guidelines, the API key must be obtained directly from the environment variable.
@@ -271,10 +271,11 @@ export const summarizeOnboardingConversation = async (callDetails: string): Prom
         ${callDetails}
 
         Based on the conversation, provide a summary covering the following points:
-        1.  **Call Synopsis:** A brief, one-paragraph summary of the conversation's purpose and outcome.
-        2.  **Lead's Interest Level:** A bulleted list assessing the lead's interest (e.g., "Highly interested, asked about pricing," "Still considering, mentioned competitor X," "Not interested at this time").
-        3.  **Key Objections/Questions:** A bulleted list of any new concerns, objections, or specific questions the lead raised.
-        4.  **Actionable Next Steps:** A short, bulleted list of 2-3 concrete next steps for the agent (e.g., "Schedule a formal appointment for Tuesday," "Send comparison quote for competitor X," "Follow up in one week."). If an appointment was set, specify the date and time.`;
+        1.  **Client Intent:** Categorize the client's final intent as 'Interested', 'Not Interested', 'Callback Requested', or 'Unknown'.
+        2.  **Call Synopsis:** A brief, one-paragraph summary of the conversation's purpose and outcome.
+        3.  **Lead's Interest Level:** A bulleted list assessing the lead's interest (e.g., "Highly interested, asked about pricing," "Still considering, mentioned competitor X," "Not interested at this time").
+        4.  **Key Objections/Questions:** A bulleted list of any new concerns, objections, or specific questions the lead raised.
+        5.  **Actionable Next Steps:** A short, bulleted list of 2-3 concrete next steps for the agent (e.g., "Schedule a formal appointment for Tuesday," "Send comparison quote for competitor X," "Follow up in one week."). If an appointment was set, specify the date and time.`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-pro',
@@ -284,22 +285,12 @@ export const summarizeOnboardingConversation = async (callDetails: string): Prom
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: {
+                        intent: { type: Type.STRING, enum: ['Interested', 'Not Interested', 'Callback Requested', 'Unknown'], description: "The client's primary intent at the end of the call." },
                         profileSummary: { type: Type.STRING, description: "A one-paragraph summary of the call's purpose and outcome." },
                         identifiedNeeds: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of the lead's current interest level and any objections or questions they raised." },
-                        productRecommendations: {
-                            type: Type.ARRAY,
-                            items: {
-                                type: Type.OBJECT,
-                                properties: {
-                                    productName: { type: Type.STRING, description: "This key is not needed. Instead, put the lead's interest level and objections in the 'identifiedNeeds' array." },
-                                    reason: { type: Type.STRING, description: "This key is not needed." }
-                                }
-                            },
-                            description: "This key is not needed."
-                        },
                         nextSteps: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of concrete next steps the agent should take, including any appointments set." }
                     },
-                    required: ["profileSummary", "identifiedNeeds", "nextSteps"]
+                    required: ["intent", "profileSummary", "identifiedNeeds", "nextSteps"]
                 }
             }
         });
@@ -395,5 +386,31 @@ export const analyzeCallRecording = async (callLog: { intent: string, status: st
     } catch (error) {
         console.error("Error analyzing call recording:", error);
         throw new Error("Failed to generate call analysis.");
+    }
+};
+
+export const generateAudioFromText = async (text: string): Promise<string> => {
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash-preview-tts",
+            contents: [{ parts: [{ text }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Kore' },
+                    },
+                },
+            },
+        });
+        
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (!base64Audio) {
+            throw new Error("No audio data returned from API.");
+        }
+        return base64Audio;
+    } catch (error) {
+        console.error("Error generating audio from text:", error);
+        throw new Error("Failed to generate audio summary.");
     }
 };

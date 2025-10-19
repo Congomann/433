@@ -48,8 +48,9 @@ const checkAndCreateRenewalNotifications = async (policies: Policy[], clients: C
 export const getAllData = async (currentUser: User) => {
     // Fetch all data in parallel for efficiency
     // FIX: Added chargebacks to data fetching to ensure all app data is available.
+    // Messages are no longer fetched here; they are handled in real-time by the client.
     const [
-        users, agents, clients, policies, interactions, tasks, messages,
+        users, agents, clients, policies, interactions, tasks,
         licenses, calendarNotes, testimonials, initialNotifications, calendarEvents, chargebacks, aiCallLogs,
         daysOff
     ] = await Promise.all([
@@ -60,7 +61,6 @@ export const getAllData = async (currentUser: User) => {
         db.getAll<Policy>('policies'),
         db.getAll<Interaction>('interactions'),
         db.getAll<Task>('tasks'),
-        db.getAll<Message>('messages'),
         db.getAll<License>('licenses'),
         db.getAll<CalendarNote>('calendarNotes'),
         db.getAll<Testimonial>('testimonials'),
@@ -84,17 +84,14 @@ export const getAllData = async (currentUser: User) => {
     // FIX: Added chargebacks to the returned data object to align with AppData type.
     const allData = {
         users: sanitizedUsers,
-        agents, clients, policies, interactions, tasks, messages,
+        agents, clients, policies, interactions, tasks,
         licenses, notifications: finalNotifications, calendarNotes, testimonials, calendarEvents,
         chargebacks, aiCallLogs, daysOff
     };
     
     // Filter data based on the current user's role
     if (currentUser.role === UserRole.AGENT || currentUser.role === UserRole.SUB_ADMIN) {
-        // Both roles should only see messages they are a part of.
-        allData.messages = allData.messages.filter(m => m.senderId === currentUser.id || m.receiverId === currentUser.id);
-
-        // Agents have further data restrictions on top of the message filtering.
+        // Agents have further data restrictions
         if (currentUser.role === UserRole.AGENT) {
             const agentClientIds = new Set(allData.clients.filter((c: Client) => c.agentId === currentUser.id).map(c => c.id));
             

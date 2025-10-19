@@ -214,18 +214,29 @@ export interface Task {
 }
 
 export interface Message {
-  id: number;
+  id: string; // Firestore document ID
   senderId: number;
-  receiverId: number;
-  text: string;
-  timestamp: string;
-  edited?: boolean;
-  status: 'active' | 'trashed';
-  source: 'internal' | 'public_profile';
-  deletedTimestamp?: string;
-  deletedBy?: number;
-  isRead: boolean;
+  messageText: string;
+  timestamp: Date;
 }
+
+export interface Conversation {
+  id: string; // Firestore document ID
+  participantIds: number[];
+  participantInfo: {
+    [key: number]: {
+      name: string;
+      avatar: string;
+    }
+  };
+  lastMessageText?: string;
+  lastMessageTimestamp?: Date;
+  lastMessageSenderId?: number;
+  unreadCounts: {
+    [key: number]: number;
+  };
+}
+
 
 export interface Notification {
   id: number;
