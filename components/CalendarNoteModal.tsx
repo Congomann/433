@@ -68,9 +68,17 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
 
     if (addToGoogle && isGoogleConnected) {
       try {
+        const description = [
+          noteToSave.name ? `Contact: ${noteToSave.name}` : '',
+          noteToSave.phone ? `Phone: ${noteToSave.phone}` : '',
+          noteToSave.email ? `Email: ${noteToSave.email}` : '',
+          '',
+          noteToSave.text
+        ].filter(Boolean).join('\n');
+
         await googleCalendarService.createEvent(
           noteToSave.reason || 'CRM Note', 
-          noteToSave.text || `Contact: ${noteToSave.name}`, 
+          description,
           noteToSave.date
         );
         addToast('Event Created', 'Event also added to your Google Calendar.', 'success');

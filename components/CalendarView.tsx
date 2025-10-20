@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { CalendarEvent, User, Agent, CalendarNote, DayOff, UserRole } from '../types';
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, ClockIcon, LocationPinIcon, GoogleIcon } from './icons';
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, ClockIcon, LocationPinIcon, GoogleIcon, RefreshIcon } from './icons';
 import { useToast } from '../contexts/ToastContext';
 import { googleCalendarService } from '../services/googleCalendarService';
 import CalendarNoteModal from './CalendarNoteModal';
@@ -44,29 +44,43 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
     setIsNoteModalOpen(true);
   };
   
-  // Fetch Google events on initial load if connected
-  useEffect(() => {
-    if (isGoogleConnected && !isGoogleClientInitializing) {
-      setIsSyncing(true);
-      googleCalendarService.listEvents()
-        .then(setGoogleEvents)
-        .catch(err => addToast('Sync Error', 'Could not fetch Google Calendar events.', 'error'))
-        .finally(() => setIsSyncing(false));
+  const handleSyncEvents = useCallback(async () => {
+    if (!isGoogleConnected) {
+        addToast('Not Connected', 'Please connect to Google Calendar first.', 'info');
+        return;
     }
-  }, [isGoogleConnected, isGoogleClientInitializing, addToast]);
-  
-  const handleGoogleConnect = async () => {
     setIsSyncing(true);
     try {
+        const events = await googleCalendarService.listEvents();
+        setGoogleEvents(events);
+        addToast('Sync Complete', `${events.length} events loaded from Google Calendar.`, 'success');
+    } catch (err) {
+        addToast('Sync Error', 'Could not fetch Google Calendar events.', 'error');
+    } finally {
+        setIsSyncing(false);
+    }
+  }, [isGoogleConnected, addToast]);
+  
+  // This effect now only runs on initial connection. Manual sync is done via button.
+  useEffect(() => {
+    if (isGoogleConnected && !isGoogleClientInitializing) {
+        handleSyncEvents();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGoogleConnected, isGoogleClientInitializing]);
+
+  const handleGoogleConnect = async () => {
+    setIsSyncing(true); // show 'Connecting...'
+    try {
         await googleCalendarService.signIn();
-        onGoogleConnectionChange(true);
-        addToast('Success', 'Google Calendar connected. Syncing events...', 'success');
+        onGoogleConnectionChange(true); // This will trigger the useEffect to fetch events
+        addToast('Success', 'Google Calendar connected.', 'success');
+        // isSyncing will be set to false by handleSyncEvents
     } catch (error) {
         console.error("Google connect error", error);
         addToast('Connection Failed', 'Could not connect to Google Calendar.', 'error');
         onGoogleConnectionChange(false);
-    } finally {
-        setIsSyncing(false);
+        setIsSyncing(false); // Reset on failure
     }
   };
 
@@ -263,14 +277,34 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
           <p className="text-slate-500 mt-1">Schedule and manage appointments</p>
         </div>
         <div className="flex items-center gap-2">
-            <button
-              onClick={isGoogleConnected ? handleGoogleDisconnect : handleGoogleConnect}
-              disabled={isGoogleClientInitializing || isSyncing}
-              className="flex items-center justify-center bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm border border-slate-300 hover:bg-slate-100 disabled:opacity-50 button-press"
-            >
-                <GoogleIcon className="w-5 h-5 mr-2" />
-                {isGoogleClientInitializing ? 'Initializing...' : isSyncing ? 'Syncing...' : isGoogleConnected ? 'Disconnect Calendar' : 'Connect Calendar'}
-            </button>
+            {isGoogleConnected ? (
+                <>
+                    <button
+                      onClick={handleSyncEvents}
+                      disabled={isSyncing}
+                      className="flex items-center justify-center bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm border border-slate-300 hover:bg-slate-100 disabled:opacity-50 button-press"
+                    >
+                        <RefreshIcon className={`w-5 h-5 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                        {isSyncing ? 'Syncing...' : 'Sync Now'}
+                    </button>
+                    <button
+                      onClick={handleGoogleDisconnect}
+                      className="flex items-center justify-center bg-white text-rose-600 font-semibold px-4 py-2.5 rounded-xl shadow-sm border border-slate-300 hover:bg-rose-50 button-press"
+                    >
+                        <GoogleIcon className="w-5 h-5 mr-2" />
+                        Disconnect
+                    </button>
+                </>
+            ) : (
+                <button
+                  onClick={handleGoogleConnect}
+                  disabled={isGoogleClientInitializing || isSyncing}
+                  className="flex items-center justify-center bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm border border-slate-300 hover:bg-slate-100 disabled:opacity-50 button-press"
+                >
+                    <GoogleIcon className="w-5 h-5 mr-2" />
+                    {isGoogleClientInitializing ? 'Initializing...' : isSyncing ? 'Connecting...' : 'Connect Calendar'}
+                </button>
+            )}
             <button onClick={() => selectedDate && handleOpenNoteModal(selectedDate)} className="flex items-center justify-center bg-primary-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 button-press">
                 <PlusIcon className="w-5 h-5 mr-2" /> New Note
             </button>

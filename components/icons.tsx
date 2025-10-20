@@ -295,6 +295,12 @@ export const PlusIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
     </svg>
 );
 
+export const RefreshIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0l3.18-3.185m-3.181-4.992a8.25 8.25 0 00-11.664 0l-3.18 3.185" />
+    </svg>
+);
+
 export const RocketLaunchIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.82m5.84-2.56a14.96 14.96 0 01.346 6.16m-5.84-7.38a14.954 14.954 0 00-3.232-1.89m3.232 1.89a14.935 14.935 0 01-6.16-.346m6.16.346a14.935 14.935 0 01-3.232-1.89m6.464-4.242a14.955 14.955 0 00-3.232-1.89m3.232 1.89a6 6 0 005.84-7.38c-.346-3.95-3.46-6.16-6.16-6.16a6 6 0 00-7.38 5.84c-3.95.346-6.16 3.46-6.16 6.16a6 6 0 005.84 7.38m0-11.62a14.927 14.927 0 01-1.89 3.232" />
