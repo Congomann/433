@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Client, Policy, Interaction, PolicyStatus, InteractionType, Agent, User, UserRole, ClientStatus, PolicyUnderwritingStatus } from '../types';
 import { summarizeNotes } from '../services/geminiService';
-import { AiSparklesIcon, PlusIcon, PencilIcon, EllipsisVerticalIcon, CalendarIcon, DollarSignIcon, ShieldIcon, DocumentTextIcon, ChevronDownIcon } from './icons';
+import { AiSparklesIcon, PlusIcon, PencilIcon, EllipsisVerticalIcon, CalendarIcon, DollarSignIcon, ShieldIcon, DocumentTextIcon, ChevronDownIcon, UsersIcon } from './icons';
 
 interface ClientDetailProps {
   client: Client;
@@ -18,6 +18,8 @@ interface ClientDetailProps {
   onOpenAddReminderModal: () => void;
   onOpenEditClientModal: (client: Client) => void;
   onOpenUnderwritingReviewModal: (policy: Policy) => void;
+  agents: Agent[];
+  onOpenAssignModal: (client: Client) => void;
 }
 
 const formatCurrency = (amount: number) => {
@@ -265,7 +267,7 @@ const PolicyCard: React.FC<{ policy: Policy; onEdit: (policy: Policy) => void; o
 };
 
 
-const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interactions, assignedAgent, onBack, currentUser, onUpdateStatus, onOpenAddPolicyModal, onOpenEditPolicyModal, onUpdatePolicy, onSaveInteraction, onOpenAddReminderModal, onOpenEditClientModal, onOpenUnderwritingReviewModal }) => {
+const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interactions, assignedAgent, onBack, currentUser, onUpdateStatus, onOpenAddPolicyModal, onOpenEditPolicyModal, onUpdatePolicy, onSaveInteraction, onOpenAddReminderModal, onOpenEditClientModal, onOpenUnderwritingReviewModal, onOpenAssignModal }) => {
   const [activeTab, setActiveTab] = useState<'policies' | 'interactions' | 'notes'>('policies');
   const [summary, setSummary] = useState('');
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -318,6 +320,8 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interacti
     if (currentUser.role === UserRole.AGENT && currentUser.id === client.agentId) return true;
     return false;
   }, [currentUser, client.agentId]);
+  
+  const canManageAssignments = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUB_ADMIN;
 
   const TabButton: React.FC<{tabId: 'policies'|'interactions'|'notes', label: string}> = ({ tabId, label }) => (
     <button
@@ -398,12 +402,27 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interacti
             <p className="text-sm font-medium text-slate-500">Address</p>
             <p className="text-md text-slate-800">{client.address}</p>
           </div>
-          {assignedAgent && (
-            <div>
+          <div>
               <p className="text-sm font-medium text-slate-500">Assigned Agent</p>
-              <p className="text-md font-semibold text-slate-800">{assignedAgent.name}</p>
-            </div>
-          )}
+              {assignedAgent ? (
+                  <div className="flex items-center gap-3 mt-1">
+                      <p className="text-md font-semibold text-slate-800">{assignedAgent.name}</p>
+                      {canManageAssignments && (
+                          <button onClick={() => onOpenAssignModal(client)} className="text-xs font-semibold text-primary-600 hover:underline">(Re-assign)</button>
+                      )}
+                  </div>
+              ) : (
+                  <div className="flex items-center gap-3 mt-1">
+                      <p className="text-md font-semibold text-amber-600">Unassigned</p>
+                       {canManageAssignments && (
+                          <button onClick={() => onOpenAssignModal(client)} className="flex items-center bg-primary-100 text-primary-700 text-xs font-bold px-2 py-1 rounded-md hover:bg-primary-200">
+                              <UsersIcon className="w-4 h-4 mr-1" />
+                              Assign
+                          </button>
+                      )}
+                  </div>
+              )}
+          </div>
           <div className="mt-auto pt-4">
               <button 
                 onClick={onOpenAddReminderModal}

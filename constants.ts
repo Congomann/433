@@ -1,5 +1,5 @@
 // FIX: Add NotificationType to imports to resolve type error.
-import { Client, Policy, Interaction, Task, ClientStatus, PolicyType, PolicyStatus, InteractionType, User, UserRole, Agent, Message, AgentStatus, License, LicenseType, Notification, CalendarNote, Testimonial, TestimonialStatus, CalendarEvent, Chargeback, ChargebackStatus, PolicyUnderwritingStatus, NotificationType, AICallLog, DayOff } from './types';
+import { Client, Policy, Interaction, Task, ClientStatus, PolicyType, PolicyStatus, InteractionType, User, UserRole, Agent, AgentStatus, License, LicenseType, Notification, CalendarNote, Testimonial, TestimonialStatus, CalendarEvent, Chargeback, ChargebackStatus, PolicyUnderwritingStatus, NotificationType, AICallLog, DayOff } from './types';
 // FIX: Add ShieldIcon to imports to resolve missing component error.
 import { ShieldCheckIcon, ShieldIcon, CalendarDaysIcon, SunIcon, ArrowsUpDownIcon, ChartTrendingUpIcon, TruckIcon, CarIcon, WrenchScrewdriverIcon, HomeIcon, BuildingOfficeIcon, FireIcon, StethoscopeIcon } from './components/icons';
 import React from 'react';
@@ -150,15 +150,6 @@ const BASE_MOCK_TASKS: Task[] = [
     { id: 3, title: 'Send birthday card to Jane Doe', dueDate: '2024-11-10', completed: true, agentId: 4, clientId: 2 }
 ];
 
-// FIX: Update message objects to match the Message interface: id is a string, timestamp is a Date,
-// text is messageText, isRead is read, and remove extraneous properties.
-const BASE_MOCK_MESSAGES: Message[] = [
-    // FIX: Removed `receiverId` and `read` properties to align with the `Message` interface.
-    { id: '1', senderId: 1, messageText: 'Welcome aboard, Kara! Let me know if you need anything.', timestamp: new Date('2024-07-24T10:00:00Z') },
-    // FIX: Removed `receiverId` and `read` properties to align with the `Message` interface.
-    { id: '2', senderId: 3, messageText: 'Thanks, Adama! Happy to be here.', timestamp: new Date('2024-07-24T10:05:00Z') }
-];
-
 const BASE_MOCK_LICENSES: License[] = [
     { id: 1, agentId: 3, type: LicenseType.HOME, state: 'TX', licenseNumber: 'TX-12345', expirationDate: '2025-12-31', fileName: 'tx-license.pdf', fileContent: '' }
 ];
@@ -202,7 +193,6 @@ export const MOCK_CLIENTS = BASE_MOCK_CLIENTS;
 export const MOCK_POLICIES = BASE_MOCK_POLICIES;
 export const MOCK_INTERACTIONS = BASE_MOCK_INTERACTIONS;
 export const MOCK_TASKS = BASE_MOCK_TASKS;
-export const MOCK_MESSAGES = BASE_MOCK_MESSAGES;
 export const MOCK_LICENSES = BASE_MOCK_LICENSES;
 export const MOCK_NOTIFICATIONS = BASE_MOCK_NOTIFICATIONS;
 export const MOCK_CALENDAR_NOTES = BASE_MOCK_CALENDAR_NOTES;
@@ -236,11 +226,15 @@ export const INSURANCE_SERVICES: InsuranceService[] = [
     { title: "Personal Auto", overview: "Comprehensive protection for your everyday car, truck, or SUV.", benefits: ["Collision & comprehensive", "Liability coverage", "Roadside assistance options"], icon: React.createElement(CarIcon, { className: "w-8 h-8" }), category: 'Auto & Commercial' },
     // FIX: Replaced JSX with React.createElement to fix parsing errors in a .ts file.
     { title: "E&O Insurance", overview: "Errors and Omissions coverage to protect your business from professional liability risks.", benefits: ["Covers legal fees", "Protects against negligence claims", "Peace of mind for service providers"], icon: React.createElement(WrenchScrewdriverIcon, { className: "w-8 h-8" }), category: 'Auto & Commercial' },
+    // FIX: Replaced JSX with React.createElement to fix parsing errors in a .ts file.
+    { title: "Property & Casualty (P&C)", overview: "Broad coverage protecting your assets from property damage and legal liability from accidents.", benefits: ["Bundled policy discounts", "Personal & business protection", "Comprehensive liability"], icon: React.createElement(ShieldCheckIcon, { className: "w-8 h-8" }), category: 'Auto & Commercial' },
     // Property & Health
     // FIX: Replaced JSX with React.createElement to fix parsing errors in a .ts file.
     { title: "Homeowners Insurance", overview: "Protect your largest asset—your home—from damage, theft, and liability.", benefits: ["Dwelling coverage", "Personal property protection", "Liability protection"], icon: React.createElement(HomeIcon, { className: "w-8 h-8" }), category: 'Property & Health' },
     // FIX: Replaced JSX with React.createElement to fix parsing errors in a .ts file.
     { title: "Commercial Property", overview: "Safeguard your business's physical assets, including buildings, equipment, and inventory.", benefits: ["Protects against fire, theft, etc.", "Business interruption coverage", "Customizable policies"], icon: React.createElement(BuildingOfficeIcon, { className: "w-8 h-8" }), category: 'Property & Health' },
+    // FIX: Replaced JSX with React.createElement to fix parsing errors in a .ts file.
+    { title: "Real Estate Insurance", overview: "Comprehensive coverage for residential and commercial real estate investments, protecting against property damage and liability.", benefits: ["Landlord protection", "Loss of rent coverage", "Property & liability"], icon: React.createElement(BuildingOfficeIcon, { className: "w-8 h-8" }), category: 'Property & Health' },
     // FIX: Replaced JSX with React.createElement to fix parsing errors in a .ts file.
     { title: "Critical Illness", overview: "Provides a lump-sum payment upon diagnosis of a covered critical illness like cancer or a heart attack.", benefits: ["Lump-sum cash payment", "Use funds for any purpose", "Supplements health insurance"], icon: React.createElement(StethoscopeIcon, { className: "w-8 h-8" }), category: 'Property & Health' },
 ];

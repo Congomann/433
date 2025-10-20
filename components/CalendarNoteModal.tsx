@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarNote, User } from '../types';
-import { CloseIcon, PlusIcon, TagIcon, TrashIcon, PencilIcon } from './icons';
+import { CloseIcon, PlusIcon, TagIcon, TrashIcon, PencilIcon, GoogleIcon } from './icons';
 import { NOTE_COLORS } from '../constants';
+import { googleCalendarService } from '../services/googleCalendarService';
+import { useToast } from '../contexts/ToastContext';
 
 interface CalendarNoteModalProps {
   isOpen: boolean;
@@ -12,18 +14,21 @@ interface CalendarNoteModalProps {
   notesForDay: CalendarNote[];
   currentUser: User;
   users: User[];
+  isGoogleConnected: boolean;
 }
 
-const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, onSave, onDelete, selectedDate, notesForDay, currentUser, users }) => {
+const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, onSave, onDelete, selectedDate, notesForDay, currentUser, users, isGoogleConnected }) => {
   const [newNoteText, setNewNoteText] = useState('');
   const [selectedColor, setSelectedColor] = useState(NOTE_COLORS[0].name);
   const [editingNote, setEditingNote] = useState<CalendarNote | null>(null);
+  const { addToast } = useToast();
 
   // State for new fields
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [reason, setReason] = useState('');
+  const [addToGoogle, setAddToGoogle] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -35,16 +40,19 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
       setPhone('');
       setEmail('');
       setReason('');
+      setAddToGoogle(false);
     }
   }, [isOpen]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    let noteToSave: Omit<CalendarNote, 'id'> & { id?: number };
+
     if (editingNote) {
       if (!editingNote.reason?.trim()) return;
-      onSave({ ...editingNote });
+      noteToSave = { ...editingNote };
     } else {
       if (!reason.trim()) return;
-      onSave({
+      noteToSave = {
         date: selectedDate.toISOString().split('T')[0],
         text: newNoteText,
         color: selectedColor,
@@ -53,8 +61,24 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
         phone,
         email,
         reason,
-      });
+      };
     }
+
+    await onSave(noteToSave);
+
+    if (addToGoogle && isGoogleConnected) {
+      try {
+        await googleCalendarService.createEvent(
+          noteToSave.reason || 'CRM Note', 
+          noteToSave.text || `Contact: ${noteToSave.name}`, 
+          noteToSave.date
+        );
+        addToast('Event Created', 'Event also added to your Google Calendar.', 'success');
+      } catch (error) {
+        addToast('Google Sync Error', 'Could not add event to Google Calendar.', 'error');
+      }
+    }
+
     setNewNoteText('');
     setSelectedColor(NOTE_COLORS[0].name);
     setEditingNote(null);
@@ -62,6 +86,7 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
     setPhone('');
     setEmail('');
     setReason('');
+    setAddToGoogle(false);
   };
 
   const getUserById = (id: number) => users.find(u => u.id === id);
@@ -163,6 +188,14 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
                     className="w-full p-2 border border-slate-300 rounded-md"
                     rows={2}
                 />
+                 {isGoogleConnected && (
+                    <div className="flex items-center pt-2">
+                        <input id="add-to-google" type="checkbox" checked={addToGoogle} onChange={(e) => setAddToGoogle(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+                        <label htmlFor="add-to-google" className="ml-2 block text-sm text-slate-700 flex items-center">
+                            Add to Google Calendar <GoogleIcon className="w-4 h-4 ml-1.5" />
+                        </label>
+                    </div>
+                )}
             </div>
             <div className="flex justify-between items-center mt-3">
               <div className="flex items-center space-x-2">

@@ -1,5 +1,5 @@
-import { MOCK_USERS, MOCK_AGENTS, MOCK_CLIENTS, MOCK_POLICIES, MOCK_INTERACTIONS, MOCK_TASKS, MOCK_MESSAGES, MOCK_LICENSES, MOCK_NOTIFICATIONS, MOCK_CALENDAR_NOTES, MOCK_TESTIMONIALS, MOCK_CALENDAR_EVENTS, MOCK_CHARGEBACKS, MOCK_AI_CALL_LOGS, MOCK_DAYS_OFF } from '../constants';
-import { User, Agent, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, CalendarEvent, Chargeback, AICallLog, DayOff } from '../types';
+import { MOCK_USERS, MOCK_AGENTS, MOCK_CLIENTS, MOCK_POLICIES, MOCK_INTERACTIONS, MOCK_TASKS, MOCK_LICENSES, MOCK_NOTIFICATIONS, MOCK_CALENDAR_NOTES, MOCK_TESTIMONIALS, MOCK_CALENDAR_EVENTS, MOCK_CHARGEBACKS, MOCK_AI_CALL_LOGS, MOCK_DAYS_OFF } from '../constants';
+import { User, Agent, Client, Policy, Interaction, Task, License, Notification, CalendarNote, Testimonial, CalendarEvent, Chargeback, AICallLog, DayOff } from '../types';
 
 const DB_NAME = 'NewHollandCRM_DB';
 const DB_VERSION = 1;

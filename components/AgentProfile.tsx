@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { Agent, User, UserRole, License, Testimonial, TestimonialStatus } from '../types';
-import { CrmLogoIcon, LocationPinIcon, PhoneIcon, EnvelopeIcon, GlobeAltIcon, CalendarIcon, WhatsAppIcon, LinkedInIcon, FacebookIcon, MessageIcon, ClientsIcon, PencilIcon, InstagramIcon, TikTokIcon, TwitterIcon, SnapchatIcon, PlusIcon, InfoIcon, ShieldCheckIcon, CalendarDaysIcon, SunIcon, ArrowsUpDownIcon, ChartTrendingUpIcon, TruckIcon, CarIcon, WrenchScrewdriverIcon, HomeIcon, BuildingOfficeIcon, FireIcon, StethoscopeIcon, ShareIcon } from './icons';
+import { CrmLogoIcon, LocationPinIcon, PhoneIcon, EnvelopeIcon, GlobeAltIcon, CalendarIcon, WhatsAppIcon, LinkedInIcon, FacebookIcon, ClientsIcon, PencilIcon, InstagramIcon, TikTokIcon, TwitterIcon, SnapchatIcon, PlusIcon, InfoIcon, ShieldCheckIcon, CalendarDaysIcon, SunIcon, ArrowsUpDownIcon, ChartTrendingUpIcon, TruckIcon, CarIcon, WrenchScrewdriverIcon, HomeIcon, BuildingOfficeIcon, FireIcon, StethoscopeIcon, ShareIcon } from './icons';
 import AgentLicenses from './AgentLicenses';
 
 interface AgentProfileProps {
     agent: Agent;
     onAddLead: (leadData: { firstName: string; lastName: string; email: string; phone: string; message: string; }) => void;
     currentUser: User;
-    onMessageAgent: (agentId: number) => void;
     onViewAgentClients: (agentId: number) => void;
     onUpdateProfile: (updatedAgent: Agent) => void;
     licenses: License[];
@@ -50,7 +49,7 @@ const TabButton: React.FC<{ tabId: string; label: string; activeTab: string; set
 );
 
 
-const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUser, onMessageAgent, onViewAgentClients, onUpdateProfile, licenses, onAddLicense, onDeleteLicense, testimonials, onAddTestimonial, isEmbedded = false, onNavigate }) => {
+const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUser, onViewAgentClients, onUpdateProfile, licenses, onAddLicense, onDeleteLicense, testimonials, onAddTestimonial, isEmbedded = false, onNavigate }) => {
     const [contactForm, setContactForm] = useState({ firstName: '', lastName: '', email: '', phone: '', message: ''});
     const [testimonialForm, setTestimonialForm] = useState({ author: '', quote: '' });
     const [isEditing, setIsEditing] = useState(false);
@@ -260,7 +259,6 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
                             <div className="bg-white rounded-lg border border-slate-200 p-6">
                                 <h2 className="text-xl font-bold text-slate-800 mb-4 border-b pb-2">Quick Actions</h2>
                                 <div className="flex flex-col sm:flex-row gap-4 pt-2">
-                                    <button onClick={() => onMessageAgent(agent.id)} className="w-full flex items-center justify-center bg-secondary text-white font-bold px-6 py-3 rounded-md shadow-sm hover:bg-slate-700 transition-transform hover:scale-105"><MessageIcon className="w-5 h-5 mr-2" /> Message Agent</button>
                                     <button onClick={() => onViewAgentClients(agent.id)} className="w-full flex items-center justify-center bg-primary-600 text-white font-bold px-6 py-3 rounded-md shadow-sm hover:bg-primary-700 transition-transform hover:scale-105"><ClientsIcon className="w-5 h-5 mr-2" /> View Clients</button>
                                 </div>
                             </div>

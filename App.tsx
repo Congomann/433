@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { AppData, User, UserRole, Agent, AgentStatus, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, ClientStatus, TestimonialStatus, EmailDraft, CalendarEvent, Chargeback, ChargebackStatus, AICallLog, DayOff } from './types';
+import { AppData, User, UserRole, Agent, AgentStatus, Client, Policy, Interaction, Task, License, Notification, CalendarNote, Testimonial, ClientStatus, TestimonialStatus, EmailDraft, CalendarEvent, Chargeback, ChargebackStatus, AICallLog, DayOff } from './types';
 import { useDatabase } from './hooks/useDatabase';
 import { useToast } from './contexts/ToastContext';
 import Sidebar from './components/Sidebar';
@@ -16,9 +16,7 @@ import CalendarView from './components/CalendarView';
 import LicensesView from './components/LicensesView';
 import TestimonialsManagement from './components/TestimonialsManagement';
 import AIAssistantView from './components/AIAssistantView';
-import AIOnboardingView from './components/AIOnboardingView';
 import AICallAssistantView from './components/AICallAssistantView';
-import AICallLogsView from './components/AICallLogsView';
 import ManagerPortal from './components/ManagerPortal';
 import UnderwritingPortal from './components/UnderwritingPortal';
 import OnboardingStepper from './components/onboarding/OnboardingStepper';
@@ -45,6 +43,9 @@ import CarrierEAppsView from './components/CarrierEAppsView';
 import TrainingView from './components/TrainingView';
 import AgentLeaderboard from './components/AgentLeaderboard';
 import NewBusinessView from './components/NewBusinessView';
+import AssignAgentModal from './components/AssignAgentModal';
+import CommissionReportView from './components/CommissionReportView';
+import { googleCalendarService } from './services/googleCalendarService';
 
 
 // =============================================================================
@@ -174,6 +175,8 @@ const App: React.FC = () => {
     const [selectedDateForNote, setSelectedDateForNote] = useState<Date | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [policyToReview, setPolicyToReview] = useState<Policy | null>(null);
+    const [isAssignAgentModalOpen, setIsAssignAgentModalOpen] = useState(false);
+    const [clientToAssign, setClientToAssign] = useState<Client | null>(null);
     
     // AI Assistant States
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -181,6 +184,10 @@ const App: React.FC = () => {
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
     const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
     const [isDraftingEmail, setIsDraftingEmail] = useState(false);
+
+    // Google Calendar Integration State
+    const [isGoogleClientInitializing, setIsGoogleClientInitializing] = useState(true);
+    const [isGoogleConnected, setIsGoogleConnected] = useState(false);
 
     // =========================================================================
     // AUTHENTICATION & INITIALIZATION (Production-ready with error handling)
@@ -199,6 +206,28 @@ const App: React.FC = () => {
 
     const handleLogout = useCallback(() => {
         addToast('Logout Disabled', 'Login functionality is currently disabled.', 'info');
+    }, [addToast]);
+    
+    // Initialize Google API Client
+    useEffect(() => {
+        const checkGapi = () => {
+            if ((window as any).gapi && (window as any).google) {
+                googleCalendarService.init()
+                    .then(() => {
+                        setIsGoogleConnected(googleCalendarService.getIsSignedIn());
+                    })
+                    .catch(err => {
+                        console.error("Google Calendar init failed", err);
+                        addToast('Error', 'Could not initialize Google Calendar integration.', 'error');
+                    })
+                    .finally(() => {
+                        setIsGoogleClientInitializing(false);
+                    });
+            } else {
+                setTimeout(checkGapi, 100); // Check again shortly
+            }
+        };
+        checkGapi();
     }, [addToast]);
 
 
@@ -308,6 +337,24 @@ const App: React.FC = () => {
         tomorrow.setDate(tomorrow.getDate() + 1);
         handleOpenNoteModal(tomorrow);
     }, [handleOpenNoteModal]);
+
+    const handleOpenAssignAgentModal = useCallback((client: Client) => {
+        setClientToAssign(client);
+        setIsAssignAgentModalOpen(true);
+    }, []);
+
+    const handleAssignAgent = useCallback(async (clientId: number, agentId: number, updates: Partial<Client>) => {
+        try {
+            await displayData.handlers.handleUpdateClient(clientId, { agentId, ...updates });
+            const agent = displayData.agents.find(a => a.id === agentId);
+            const client = displayData.clients.find(c => c.id === clientId);
+            addToast('Lead Assigned', `Lead ${client?.firstName} assigned to ${agent?.name}.`, 'success');
+            setIsAssignAgentModalOpen(false);
+            setClientToAssign(null);
+        } catch (error: any) {
+             addToast('Assignment Failed', error.message || 'Could not assign agent.', 'error');
+        }
+    }, [displayData.handlers, displayData.agents, displayData.clients, addToast]);
 
     const handleSaveAgent = useCallback(async (agentData: Agent, newRole?: UserRole) => {
         const isNew = !agentData.id;
@@ -436,36 +483,45 @@ const App: React.FC = () => {
 
         try {
             switch (view) {
-                case 'dashboard': return <Dashboard user={displayUser!} clients={displayData.clients} policies={displayData.policies} tasks={displayData.tasks} agentsCount={displayData.agents.length} agents={displayData.agents} />;
-                case 'clients': return <ClientList title={agentForClients ? `${agentForClients.name}'s Clients` : 'All Clients'} clients={clientsForList} onAddClient={() => setIsAddClientModalOpen(true)} onSelectClient={(id) => handleNavigate(`client/${id}`)} agentFilter={agentForClients} onClearFilter={() => handleNavigate('clients')} />;
-                case 'client': return clientForDetail ? <ClientDetail client={clientForDetail} policies={displayData.policies.filter(p => p.clientId === clientForDetail.id)} interactions={displayData.interactions.filter(i => i.clientId === clientForDetail.id)} assignedAgent={displayData.agents.find(a => a.id === clientForDetail.agentId)} onBack={() => handleNavigate('clients')} currentUser={displayUser!} onUpdateStatus={displayData.handlers.handleUpdateClientStatus} onOpenAddPolicyModal={() => handleOpenAddPolicyModal(clientForDetail.id)} onOpenEditPolicyModal={handleOpenEditPolicyModal} onUpdatePolicy={displayData.handlers.handleUpdatePolicy} onSaveInteraction={displayData.handlers.handleSaveInteraction} onOpenAddReminderModal={handleOpenAddReminderModal} onOpenEditClientModal={handleOpenEditClientModal} onOpenUnderwritingReviewModal={handleOpenReviewModal} /> : <div className="p-8 text-center">Client not found</div>;
+                case 'dashboard': return <Dashboard user={displayUser!} clients={displayData.clients} policies={displayData.policies} tasks={displayData.tasks} agentsCount={displayData.agents.length} agents={displayData.agents} onNavigate={handleNavigate} />;
+                case 'clients': return <ClientList title={agentForClients ? `${agentForClients.name}'s Clients` : 'All Clients'} clients={clientsForList} onAddClient={() => setIsAddClientModalOpen(true)} onSelectClient={(id) => handleNavigate(`client/${id}`)} agentFilter={agentForClients} onClearFilter={() => handleNavigate('clients')} currentUser={displayUser!} agents={displayData.agents} onOpenAssignModal={handleOpenAssignAgentModal} />;
+                case 'client': return clientForDetail ? <ClientDetail client={clientForDetail} policies={displayData.policies.filter(p => p.clientId === clientForDetail.id)} interactions={displayData.interactions.filter(i => i.clientId === clientForDetail.id)} assignedAgent={displayData.agents.find(a => a.id === clientForDetail.agentId)} onBack={() => handleNavigate('clients')} currentUser={displayUser!} onUpdateStatus={displayData.handlers.handleUpdateClientStatus} onOpenAddPolicyModal={() => handleOpenAddPolicyModal(clientForDetail.id)} onOpenEditPolicyModal={handleOpenEditPolicyModal} onUpdatePolicy={displayData.handlers.handleUpdatePolicy} onSaveInteraction={displayData.handlers.handleSaveInteraction} onOpenAddReminderModal={handleOpenAddReminderModal} onOpenEditClientModal={handleOpenEditClientModal} onOpenUnderwritingReviewModal={handleOpenReviewModal} agents={displayData.agents} onOpenAssignModal={handleOpenAssignAgentModal} /> : <div className="p-8 text-center">Client not found</div>;
                 case 'tasks': return <TasksView tasks={displayData.tasks} clients={displayData.clients} onSaveTask={displayData.handlers.handleSaveTask} onToggleTask={displayData.handlers.handleToggleTask} onDeleteTask={displayData.handlers.handleDeleteTask} onSelectClient={(id) => handleNavigate(`client/${id}`)} />;
                 case 'agents': return <AgentManagement currentUser={displayUser!} agents={displayData.agents} users={displayData.users} clients={displayData.clients} policies={displayData.policies} onNavigate={handleNavigate} onAddAgent={() => { setAgentToEdit(null); setIsAddEditAgentModalOpen(true); }} onEditAgent={(agent) => { const user = displayData.users.find(u => u.id === agent.id); setAgentToEdit(agent); setRoleOfAgentToEdit(user?.role || null); setIsAddEditAgentModalOpen(true); }} onApproveAgent={handleApproveAgent} onDeactivateAgent={displayData.handlers.handleDeactivateAgent} onReactivateAgent={displayData.handlers.handleReactivateAgent} onRejectAgent={displayData.handlers.handleRejectAgent} onDeleteAgent={displayData.handlers.handleDeleteAgent} highlightedAgentId={highlightedAgentId} />;
                 case 'agent': {
                     const agentForProfile = viewParam ? displayData.agents.find(a => a.slug === viewParam) : null;
                     if (!agentForProfile) return <div className="p-8 text-center">Agent not found</div>;
-                    return <AgentProfile agent={agentForProfile} onAddLead={(leadData) => displayData.handlers.handleAddLeadFromProfile(leadData, agentForProfile.id)} currentUser={displayUser!} onMessageAgent={(agentId) => handleNavigate(`messages/${agentId}`)} onViewAgentClients={(agentId) => handleNavigate(`clients/${agentId}`)} onUpdateProfile={displayData.handlers.onUpdateAgentProfile} licenses={displayData.licenses} onAddLicense={displayData.handlers.handleAddLicense} onDeleteLicense={displayData.handlers.onDeleteLicense} testimonials={displayData.testimonials} onAddTestimonial={displayData.handlers.onAddTestimonial} onNavigate={handleNavigate} />;
+                    return <AgentProfile agent={agentForProfile} onAddLead={(leadData) => displayData.handlers.handleAddLeadFromProfile(leadData, agentForProfile.id)} currentUser={displayUser!} onViewAgentClients={(agentId) => handleNavigate(`clients/${agentId}`)} onUpdateProfile={displayData.handlers.onUpdateAgentProfile} licenses={displayData.licenses} onAddLicense={displayData.handlers.handleAddLicense} onDeleteLicense={displayData.handlers.onDeleteLicense} testimonials={displayData.testimonials} onAddTestimonial={displayData.handlers.onAddTestimonial} onNavigate={handleNavigate} />;
                 }
                 case 'my-profile': {
                     if (!currentAgent) return <div className="p-8 text-center">Profile not available.</div>;
-                    return <AgentProfile agent={currentAgent} onAddLead={(leadData) => displayData.handlers.handleAddLeadFromProfile(leadData, currentAgent.id)} currentUser={displayUser!} onMessageAgent={(agentId) => handleNavigate(`messages/${agentId}`)} onViewAgentClients={(agentId) => handleNavigate(`clients/${agentId}`)} onUpdateProfile={displayData.handlers.onUpdateAgentProfile} licenses={displayData.licenses} onAddLicense={displayData.handlers.handleAddLicense} onDeleteLicense={displayData.handlers.onDeleteLicense} testimonials={displayData.testimonials} onAddTestimonial={displayData.handlers.onAddTestimonial} onNavigate={handleNavigate} />;
+                    return <AgentProfile agent={currentAgent} onAddLead={(leadData) => displayData.handlers.handleAddLeadFromProfile(leadData, currentAgent.id)} currentUser={displayUser!} onViewAgentClients={(agentId) => handleNavigate(`clients/${agentId}`)} onUpdateProfile={displayData.handlers.onUpdateAgentProfile} licenses={displayData.licenses} onAddLicense={displayData.handlers.handleAddLicense} onDeleteLicense={displayData.handlers.onDeleteLicense} testimonials={displayData.testimonials} onAddTestimonial={displayData.handlers.onAddTestimonial} onNavigate={handleNavigate} />;
                 }
                 case 'leads': return <LeadDistribution leads={displayData.clients.filter(c => c.status === ClientStatus.LEAD)} onSelectLead={(id) => handleNavigate(`client/${id}`)} onCreateLead={handleOpenCreateLead} onEditLead={handleOpenEditLead} onDeleteLead={(id) => displayData.handlers.handleDeleteTask(id)} />;
                 case 'commissions': return <CommissionsView currentUser={displayUser!} agents={displayData.agents} policies={displayData.policies} clients={displayData.clients} chargebacks={displayData.chargebacks} onUpdatePolicy={displayData.handlers.handleUpdatePolicy} />;
+                case 'commission-report': 
+                    if (displayUser!.role !== UserRole.ADMIN && displayUser!.role !== UserRole.MANAGER) {
+                        return <div className="p-8">Access Denied.</div>;
+                    }
+                    return <CommissionReportView 
+                        currentUser={displayUser!} 
+                        agents={displayData.agents} 
+                        policies={displayData.policies} 
+                        clients={displayData.clients} 
+                        chargebacks={displayData.chargebacks} 
+                    />;
                 case 'chargebacks': return <ChargebackView chargebacks={displayData.chargebacks} onUpdateStatus={displayData.handlers.handleUpdateChargebackStatus} />;
                 case 'messages': return <MessagingView currentUser={displayUser!} users={displayData.users} onOpenBroadcast={() => setIsBroadcastModalOpen(true)} initialSelectedUserId={viewParam ? Number(viewParam) : undefined} />;
-                case 'calendar': return <CalendarView currentUser={displayUser!} agents={displayData.agents} calendarEvents={displayData.calendarEvents} calendarNotes={displayData.calendarNotes} users={displayData.users} onOpenNoteModal={handleOpenNoteModal} daysOff={displayData.daysOff} onToggleDayOff={displayData.handlers.handleToggleDayOff} onAddDaysOffBatch={displayData.handlers.handleAddDaysOffBatch} onDeleteDaysOffBatch={displayData.handlers.handleDeleteDaysOffBatch} />;
+                case 'calendar': return <CalendarView currentUser={displayUser!} agents={displayData.agents} calendarEvents={displayData.calendarEvents} calendarNotes={displayData.calendarNotes} users={displayData.users} onOpenNoteModal={handleOpenNoteModal} daysOff={displayData.daysOff} onToggleDayOff={displayData.handlers.handleToggleDayOff} onAddDaysOffBatch={displayData.handlers.handleAddDaysOffBatch} onDeleteDaysOffBatch={displayData.handlers.handleDeleteDaysOffBatch} isGoogleConnected={isGoogleConnected} isGoogleClientInitializing={isGoogleClientInitializing} onGoogleConnectionChange={setIsGoogleConnected} onSaveCalendarNote={displayData.handlers.handleSaveCalendarNote} onDeleteCalendarNote={displayData.handlers.handleDeleteCalendarNote} />;
                 case 'licenses': {
                     if (!currentAgent) return <div className="p-8 text-center">Not an agent.</div>;
                     return <LicensesView agent={currentAgent} licenses={displayData.licenses} onAddLicense={displayData.handlers.handleAddLicense} onDeleteLicense={displayData.handlers.onDeleteLicense} />;
                 }
                 case 'testimonials': return <TestimonialsManagement testimonials={displayData.testimonials} onUpdateTestimonialStatus={displayData.handlers.handleUpdateTestimonialStatus} onDeleteTestimonial={displayData.handlers.handleDeleteTestimonial} onNavigate={handleNavigate} />;
                 case 'ai-assistant': return <AIAssistantView currentUser={displayUser!} clients={displayData.clients} tasks={displayData.tasks} agents={displayData.agents} policies={displayData.policies} interactions={displayData.interactions} onSaveTask={onAICreateTask} onAssignLead={handleAIAssignLead} onNavigate={handleNavigate} />;
-                case 'ai-onboarding': return <AIOnboardingView leads={displayData.clients.filter(c => c.status === ClientStatus.LEAD)} onSave={displayData.handlers.handleUpdateClientAndAddInteractions} onNavigate={handleNavigate} />;
                 case 'ai-call-assistant': 
                     if (!currentAgent) return <div className="p-8">Agent profile not found. Call assistant is unavailable.</div>;
                     return <AICallAssistantView currentUser={displayUser!} agent={currentAgent} clients={displayData.clients} onSaveInteraction={displayData.handlers.handleSaveInteraction} onNavigate={handleNavigate} onUpdateClient={displayData.handlers.handleUpdateClient} onAddLead={handleOpenCreateLead} />;
-                case 'ai-call-logs': return <AICallLogsView aiCallLogs={displayData.aiCallLogs} />;
                 case 'new-business': return <NewBusinessView clients={displayData.clients} onSavePolicy={displayData.handlers.handleSavePolicy} />;
                 case 'carrier-e-apps': return <CarrierEAppsView clients={displayData.clients} onSavePolicy={displayData.handlers.handleSavePolicy} />;
                 case 'training': return <TrainingView />;
@@ -552,6 +608,7 @@ const App: React.FC = () => {
                 notesForDay={displayData.calendarNotes.filter(n => n.date === selectedDateForNote.toISOString().split('T')[0])}
                 currentUser={displayUser}
                 users={displayData.users}
+                isGoogleConnected={isGoogleConnected}
               />
             )}
             <UnderwritingReviewModal
@@ -562,6 +619,15 @@ const App: React.FC = () => {
                     displayData.handlers.handleSaveUnderwritingReview(policyId, updates);
                     setIsReviewModalOpen(false);
                 }}
+            />
+            <AssignAgentModal
+                isOpen={isAssignAgentModalOpen}
+                onClose={() => setIsAssignAgentModalOpen(false)}
+                onAssign={handleAssignAgent}
+                client={clientToAssign}
+                agents={displayData.agents}
+                clients={displayData.clients}
+                currentUser={displayUser}
             />
         </>
     );

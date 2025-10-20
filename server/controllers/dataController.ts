@@ -1,6 +1,6 @@
 import { db } from '../db';
 // FIX: Added Chargeback to import list to support fetching chargeback data.
-import { User, UserRole, Policy, Client, Interaction, Task, License, Testimonial, Notification, PolicyStatus, NotificationType, CalendarEvent, Message, CalendarNote, Chargeback, AICallLog, DayOff } from '../../types';
+import { User, UserRole, Policy, Client, Interaction, Task, License, Testimonial, Notification, PolicyStatus, NotificationType, CalendarEvent, CalendarNote, Chargeback, AICallLog, DayOff } from '../../types';
 
 const checkAndCreateRenewalNotifications = async (policies: Policy[], clients: Client[], notifications: Notification[]) => {
     const today = new Date();

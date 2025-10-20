@@ -5,7 +5,7 @@ import * as usersController from './controllers/usersController';
 import * as dataController from './controllers/dataController';
 import * as auth from './auth';
 import { db } from './db';
-import { User, UserRole, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, PolicyStatus, Chargeback, ChargebackStatus, NotificationType, PolicyUnderwritingStatus, CalendarEvent, DayOff } from '../types';
+import { User, UserRole, Policy, Interaction, Task, License, Notification, CalendarNote, Testimonial, PolicyStatus, Chargeback, ChargebackStatus, NotificationType, PolicyUnderwritingStatus, CalendarEvent, DayOff } from '../types';
 
 const SIMULATED_LATENCY = 0; // ms
 

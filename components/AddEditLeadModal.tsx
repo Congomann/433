@@ -24,6 +24,8 @@ const BLANK_FORM_STATE = {
     weight: '',
     medications: '',
     // Address
+    streetNumber: '',
+    streetName: '',
     city: '',
     state: '',
     // Financial
@@ -43,6 +45,10 @@ const AddEditLeadModal: React.FC<AddEditLeadModalProps> = ({ isOpen, onClose, on
   useEffect(() => {
     if (isOpen) {
         if (leadToEdit) {
+            const addressParts = (leadToEdit.address || '').split(' ');
+            const streetNumber = /^\d+$/.test(addressParts[0]) ? addressParts[0] : '';
+            const streetName = /^\d+$/.test(addressParts[0]) ? addressParts.slice(1).join(' ') : leadToEdit.address || '';
+
             setFormState({
                 firstName: leadToEdit.firstName || '',
                 lastName: leadToEdit.lastName || '',
@@ -54,6 +60,8 @@ const AddEditLeadModal: React.FC<AddEditLeadModalProps> = ({ isOpen, onClose, on
                 height: leadToEdit.height || '',
                 weight: leadToEdit.weight?.toString() || '',
                 medications: leadToEdit.medications || '',
+                streetNumber: streetNumber,
+                streetName: streetName,
                 city: leadToEdit.city || '',
                 state: leadToEdit.state || '',
                 bankName: leadToEdit.bankName || '',
@@ -78,19 +86,20 @@ const AddEditLeadModal: React.FC<AddEditLeadModalProps> = ({ isOpen, onClose, on
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const { streetNumber, streetName, ...restOfForm } = formState;
+
     const leadPayload: Client = {
-        ...leadToEdit, // a bit of a hack to preserve other fields like address, joinDate, etc.
+        ...leadToEdit, // a bit of a hack to preserve other fields
         id: leadToEdit?.id || 0, // 0 for new
-        // FIX: Use ClientStatus.LEAD enum member instead of a string literal to match the expected type.
         status: leadToEdit?.status || ClientStatus.LEAD,
-        joinDate: leadToEdit?.joinDate || '',
-        address: leadToEdit?.address || '',
-        // Form fields
-        ...formState,
-        agentId: formState.agentId ? Number(formState.agentId) : undefined,
-        weight: formState.weight ? Number(formState.weight) : undefined,
-        monthlyPremium: Number(formState.monthlyPremium) || 0,
-        annualPremium: Number(formState.annualPremium) || 0,
+        joinDate: leadToEdit?.joinDate || new Date().toISOString().split('T')[0],
+        address: `${streetNumber} ${streetName}`.trim(),
+        // Form fields from formState, excluding the ones I handled
+        ...restOfForm,
+        agentId: restOfForm.agentId ? Number(restOfForm.agentId) : undefined,
+        weight: restOfForm.weight ? Number(restOfForm.weight) : undefined,
+        monthlyPremium: Number(restOfForm.monthlyPremium) || 0,
+        annualPremium: Number(restOfForm.annualPremium) || 0,
     };
 
     onSave(leadPayload);
@@ -127,6 +136,8 @@ const AddEditLeadModal: React.FC<AddEditLeadModalProps> = ({ isOpen, onClose, on
 
                 {/* Address Info */}
                 <h3 className="col-span-full font-semibold text-lg text-slate-700 border-b border-slate-200 pb-2 mb-2 mt-4">Home Address</h3>
+                <InputField label="Street Number" name="streetNumber" value={formState.streetNumber} onChange={handleChange} />
+                <InputField label="Street Name" name="streetName" value={formState.streetName} onChange={handleChange} />
                 <InputField label="City" name="city" value={formState.city} onChange={handleChange} required />
                 <InputField label="Current State" name="state" value={formState.state} onChange={handleChange} required />
                 

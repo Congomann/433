@@ -93,14 +93,17 @@ const WebsiteStructureView: React.FC = () => {
                          <ServiceItem title="Passenger Auto" description="Protection for everyday vehicles." benefits="Covers liability, collision, and comprehensive damages." />
                          <ServiceItem title="Classic & Custom Cars" description="Tailored coverage for collectible and modified vehicles." benefits="Agreed value coverage, specialized claims handling." />
                          <ServiceItem title="Commercial (Heavy-Duty) Vehicles" description="Coverage for trucks, fleets, and contractors." benefits="Protects against liability, damage, and downtime." />
+                         <ServiceItem title="Property & Casualty" description="Bundled protection for your property (home, auto) and against liability." benefits="Comprehensive asset protection, bundled discounts." />
                     </ServiceCategory>
                      <ServiceCategory title="Property Insurance" icon={<HomeIcon className="w-6 h-6" />}>
                          <ServiceItem title="Homeowners Insurance" description="Protection for home, belongings, and liability." benefits="Covers damage, theft, and personal liability." />
                          <ServiceItem title="Renters Insurance" description="Protects personal items and provides liability coverage." benefits="Affordable way to protect your belongings." />
                          <ServiceItem title="Theft, Flood & Fire Coverage" description="Add-ons for natural and accidental damages." benefits="Comprehensive protection against specific perils." />
+                         <ServiceItem title="Real Estate Insurance" description="Coverage for residential and commercial real estate investments." benefits="Landlord protection, loss of rent, and liability coverage." />
                     </ServiceCategory>
                     <ServiceCategory title="Health Insurance" icon={<HeartIcon className="w-6 h-6" />}>
                         <ServiceItem title="Health & Dental" description="Individual and family medical coverage." benefits="Access to quality care, preventive benefits, and affordable premiums." />
+                        <ServiceItem title="Critical Illness" description="Provides a lump-sum payment upon diagnosis of a covered illness." benefits="Lump-sum cash, use funds for any purpose, supplements health insurance." />
                     </ServiceCategory>
                     <ServiceCategory title="Group Benefits" icon={<ClientsIcon className="w-6 h-6" />}>
                         <ServiceItem title="Supplemental Health Plans" description="Protect income during illness or injury." benefits="Cash benefits paid directly to you." />

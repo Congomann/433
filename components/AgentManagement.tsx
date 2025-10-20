@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Agent, AgentStatus, User, UserRole, Client, Policy } from '../types';
-import { PlusIcon } from './icons';
+import { PlusIcon, PencilIcon, TrashIcon, CheckCircleIcon, ExclamationTriangleIcon, XCircleIcon } from './icons';
 import ApproveAgentModal from './ApproveAgentModal';
 import Pagination from './Pagination';
 
@@ -36,24 +36,35 @@ const TabButton: React.FC<{tabId: AgentTableTab, label: string, count: number, a
     </button>
 );
 
-const ActionButton: React.FC<{ onClick: () => void, text: string, color: 'emerald' | 'amber' | 'rose' | 'slate', ariaLabel: string, title?: string }> = ({ onClick, text, color, ariaLabel, title }) => {
+const ActionButton: React.FC<{
+  onClick: () => void;
+  icon: React.ReactNode;
+  text: string;
+  color: 'emerald' | 'amber' | 'rose' | 'slate';
+  ariaLabel: string;
+  title?: string;
+}> = ({ onClick, icon, text, color, ariaLabel, title }) => {
     const colorClasses = {
-        emerald: 'text-emerald-600 hover:text-emerald-800',
-        amber: 'text-amber-600 hover:text-amber-800',
-        rose: 'text-rose-600 hover:text-rose-800',
-        slate: 'text-slate-500 hover:text-primary-600'
+        emerald: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
+        amber: 'bg-amber-50 text-amber-700 hover:bg-amber-100',
+        rose: 'bg-rose-50 text-rose-700 hover:bg-rose-100',
+        slate: 'bg-slate-100 text-slate-700 hover:bg-slate-200'
     };
     return (
-      <button 
-          onClick={onClick} 
-          className={`font-medium ${colorClasses[color]} transition-colors`}
+      <button
+          onClick={(e) => {
+              e.stopPropagation(); // Prevent row click
+              onClick();
+          }}
+          className={`flex items-center text-sm font-semibold px-3 py-1.5 rounded-md transition-colors button-press ${colorClasses[color]}`}
           aria-label={ariaLabel}
           title={title || text}
       >
-          {text}
+          {icon} {text}
       </button>
     );
 };
+
 
 const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[], highlightedAgentId: number | null, onNavigate: (view: string) => void, onEditAgent: (agent: Agent) => void, onDeactivate: (agentId: number) => void, canManage: boolean}> = ({ agents, highlightedAgentId, onNavigate, onEditAgent, onDeactivate, canManage }) => (
     <div className="bg-white rounded-t-lg border-x border-t border-slate-200 overflow-hidden">
@@ -92,10 +103,11 @@ const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[],
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{agent.joinDate}</td>
                 {canManage && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                       <div className="flex items-center space-x-4">
+                       <div className="flex items-center space-x-2">
                             <ActionButton
                                 onClick={() => onEditAgent(agent)}
-                                text="Edit Profile"
+                                text="Edit"
+                                icon={<PencilIcon className="w-4 h-4 mr-1.5" />}
                                 color="slate"
                                 ariaLabel={`Edit ${agent.name}`}
                                 title="Edit agent profile"
@@ -103,6 +115,7 @@ const ActiveAgentsTable: React.FC<{agents: (Agent & { totalPremium: number })[],
                             <ActionButton
                                 onClick={() => onDeactivate(agent.id)}
                                 text="Deactivate"
+                                icon={<ExclamationTriangleIcon className="w-4 h-4 mr-1.5" />}
                                 color="amber"
                                 ariaLabel={`Deactivate ${agent.name}`}
                                 title="Deactivate agent"
@@ -141,17 +154,19 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], onReactivate: (agentId: nu
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{agent.location}</td>
                 {canManage && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
                             <ActionButton
                                 onClick={() => onReactivate(agent.id)}
                                 text="Reactivate"
+                                icon={<CheckCircleIcon className="w-4 h-4 mr-1.5" />}
                                 color="emerald"
                                 ariaLabel={`Reactivate ${agent.name}`}
                                 title="Reactivate agent"
                             />
                              <ActionButton
                                 onClick={() => onDelete(agent.id)}
-                                text="Delete Permanently"
+                                text="Delete"
+                                icon={<TrashIcon className="w-4 h-4 mr-1.5" />}
                                 color="rose"
                                 ariaLabel={`Permanently Delete ${agent.name}`}
                                 title="Delete agent permanently"
@@ -190,10 +205,11 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{agent.location}</td>
                 {canManage && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
                             <ActionButton
                                 onClick={() => setAgentToApprove(agent)}
                                 text="Approve"
+                                icon={<CheckCircleIcon className="w-4 h-4 mr-1.5" />}
                                 color="emerald"
                                 ariaLabel={`Approve ${agent.name}`}
                                 title="Approve application"
@@ -201,6 +217,7 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
                             <ActionButton
                                 onClick={() => onEditAgent(agent)}
                                 text="Edit"
+                                icon={<PencilIcon className="w-4 h-4 mr-1.5" />}
                                 color="slate"
                                 ariaLabel={`Edit ${agent.name}`}
                                 title="Edit agent application"
@@ -208,6 +225,7 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
                             <ActionButton
                                 onClick={() => onReject(agent.id)}
                                 text="Reject"
+                                icon={<XCircleIcon className="w-4 h-4 mr-1.5" />}
                                 color="rose"
                                 ariaLabel={`Reject ${agent.name}`}
                                 title="Reject application"

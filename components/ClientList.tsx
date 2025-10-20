@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Client, ClientStatus, Agent } from '../types';
+import { Client, ClientStatus, Agent, User, UserRole } from '../types';
 import { PlusIcon, CloseIcon, SearchIcon, UserCircleIcon } from './icons';
 import Pagination from './Pagination';
 
@@ -12,12 +12,22 @@ interface ClientListProps {
   onAddClient: () => void;
   agentFilter?: Agent | null;
   onClearFilter?: () => void;
+  currentUser: User;
+  agents: Agent[];
+  onOpenAssignModal: (client: Client) => void;
 }
 
-const ClientList: React.FC<ClientListProps> = ({ title, clients, onSelectClient, onAddClient, agentFilter, onClearFilter }) => {
+const ClientList: React.FC<ClientListProps> = ({ title, clients, onSelectClient, onAddClient, agentFilter, onClearFilter, currentUser, agents, onOpenAssignModal }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  
+  const agentMap = useMemo(() => {
+    return agents.reduce((map, agent) => {
+        map[agent.id] = agent.name;
+        return map;
+    }, {} as Record<number, string>);
+  }, [agents]);
 
   const filteredClients = useMemo(() => {
     return clients.filter(client => {
@@ -48,6 +58,8 @@ const ClientList: React.FC<ClientListProps> = ({ title, clients, onSelectClient,
       default: return 'bg-slate-100 text-slate-800 ring-slate-200';
     }
   };
+  
+  const canManageAssignments = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUB_ADMIN;
 
   return (
     <div className="p-6 sm:p-10">
@@ -106,10 +118,12 @@ const ClientList: React.FC<ClientListProps> = ({ title, clients, onSelectClient,
             <table className="min-w-full">
             <thead className="bg-slate-50/50">
                 <tr>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Join Date</th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned Agent</th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Join Date</th>
+                    {canManageAssignments && <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
                 </tr>
             </thead>
             <tbody>
@@ -137,7 +151,25 @@ const ClientList: React.FC<ClientListProps> = ({ title, clients, onSelectClient,
                         {client.status}
                     </span>
                     </td>
+                    <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500 font-medium">
+                        {client.agentId ? agentMap[client.agentId] : <span className="text-amber-600">Unassigned</span>}
+                    </td>
                     <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500">{client.joinDate}</td>
+                    {canManageAssignments && (
+                        <td className="px-6 py-5 whitespace-nowrap">
+                             {client.status === ClientStatus.LEAD && !client.agentId && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onOpenAssignModal(client);
+                                    }}
+                                    className="px-3 py-1 text-sm font-semibold bg-primary-100 text-primary-700 rounded-md hover:bg-primary-200"
+                                >
+                                    Assign
+                                </button>
+                             )}
+                        </td>
+                    )}
                 </tr>
                 ))}
             </tbody>

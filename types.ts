@@ -17,6 +17,8 @@ export enum PolicyType {
   COMMERCIAL = 'Commercial Insurance',
   PROPERTY = 'Property Insurance',
   E_AND_O = 'E&O Insurance',
+  REAL_ESTATE = 'Real Estate Insurance',
+  PROPERTY_AND_CASUALTY = 'Property & Casualty',
 }
 
 export enum PolicyStatus {
@@ -64,7 +66,6 @@ export enum TestimonialStatus {
 }
 
 export enum NotificationType {
-  NEW_MESSAGE = 'new_message',
   LEAD_ASSIGNED = 'lead_assigned',
   TASK_DUE = 'task_due',
   AGENT_APPROVED = 'agent_approved',
@@ -213,32 +214,6 @@ export interface Task {
   agentId?: number;
 }
 
-export interface Message {
-  id: string; // Firestore document ID
-  senderId: number;
-  messageText: string;
-  timestamp: Date;
-  isDeleted?: boolean;
-}
-
-export interface Conversation {
-  id: string; // Firestore document ID
-  participantIds: number[];
-  participantInfo: {
-    [key: number]: {
-      name: string;
-      avatar: string;
-    }
-  };
-  lastMessageText?: string;
-  lastMessageTimestamp?: Date;
-  lastMessageSenderId?: number;
-  unreadCounts: {
-    [key: number]: number;
-  };
-}
-
-
 export interface Notification {
   id: number;
   userId: number; // The user who receives the notification
@@ -347,7 +322,6 @@ export interface AppData {
     policies: Policy[];
     interactions: Interaction[];
     tasks: Task[];
-    messages: Message[];
     licenses: License[];
     notifications: Notification[];
     calendarNotes: CalendarNote[];

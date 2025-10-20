@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon, AiSparklesIcon, UsersIcon, ShieldCheckIcon, BroadcastIcon, LogoutIcon, RocketLaunchIcon, ExclamationTriangleIcon, TrophyIcon, DocumentTextIcon, PhoneIcon } from './icons';
+import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon, AiSparklesIcon, UsersIcon, ShieldCheckIcon, BroadcastIcon, LogoutIcon, RocketLaunchIcon, ExclamationTriangleIcon, TrophyIcon, DocumentTextIcon, PhoneIcon } from './icons';
 import { User, UserRole, Notification, NotificationType } from '../types';
 
 interface SidebarProps {
@@ -18,9 +18,7 @@ const navConfig = {
   [UserRole.ADMIN]: [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     { id: 'ai-assistant', label: 'AI Assistant', icon: <AiSparklesIcon /> },
-    { id: 'ai-onboarding', label: 'AI Onboarding', icon: <RocketLaunchIcon /> },
     { id: 'ai-call-assistant', label: 'AI Call Assistant', icon: <PhoneIcon /> },
-    { id: 'ai-call-logs', label: 'AI Call Logs', icon: <PhoneIcon /> },
     { id: 'clients', label: 'Clients', icon: <ClientsIcon /> },
     { id: 'agents', label: 'Agents', icon: <ClientsIcon /> },
     { id: 'leaderboard', label: 'Leaderboard', icon: <TrophyIcon /> },
@@ -28,7 +26,7 @@ const navConfig = {
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'training', label: 'Training', icon: <TrophyIcon /> },
     { id: 'commissions', label: 'Commissions', icon: <DollarSignIcon /> },
-    { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
+    { id: 'commission-report', label: 'Commission Report', icon: <DocumentTextIcon /> },
   ],
   [UserRole.MANAGER]: [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
@@ -38,27 +36,24 @@ const navConfig = {
     { id: 'clients', label: 'View Clients', icon: <ClientsIcon /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'training', label: 'Training', icon: <TrophyIcon /> },
-    { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
+    { id: 'commission-report', label: 'Commission Report', icon: <DocumentTextIcon /> },
   ],
   [UserRole.UNDERWRITING]: [
     { id: 'underwriting-portal', label: 'Underwriting Queue', icon: <DocumentTextIcon /> },
     { id: 'clients', label: 'View Clients', icon: <ClientsIcon /> },
+    { id: 'leaderboard', label: 'Leaderboard', icon: <TrophyIcon /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'training', label: 'Training', icon: <TrophyIcon /> },
-    { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
   ],
   [UserRole.SUB_ADMIN]: [
     { id: 'dashboard', label: 'Lead Dashboard', icon: <DashboardIcon /> },
     { id: 'ai-assistant', label: 'AI Assistant', icon: <AiSparklesIcon /> },
-    { id: 'ai-onboarding', label: 'AI Onboarding', icon: <RocketLaunchIcon /> },
     { id: 'ai-call-assistant', label: 'AI Call Assistant', icon: <PhoneIcon /> },
-    { id: 'ai-call-logs', label: 'AI Call Logs', icon: <PhoneIcon /> },
     { id: 'leads', label: 'Lead Distribution', icon: <ClientsIcon /> },
     { id: 'leaderboard', label: 'Leaderboard', icon: <TrophyIcon /> },
     { id: 'agents', label: 'View Agents', icon: <UsersIcon /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'training', label: 'Training', icon: <TrophyIcon /> },
-    { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
   ],
   [UserRole.AGENT]: [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
@@ -67,12 +62,12 @@ const navConfig = {
     { id: 'new-business', label: 'New Business', icon: <RocketLaunchIcon /> },
     { id: 'carrier-e-apps', label: 'Carrier E-Apps', icon: <RocketLaunchIcon /> },
     { id: 'clients', label: 'My Clients', icon: <ClientsIcon /> },
+    { id: 'leaderboard', label: 'Leaderboard', icon: <TrophyIcon /> },
     { id: 'tasks', label: 'My Tasks', icon: <TasksIcon /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'training', label: 'Training', icon: <TrophyIcon /> },
     { id: 'commissions', label: 'Commissions', icon: <DollarSignIcon /> },
     { id: 'chargebacks', label: 'Debt / Chargeback', icon: <ExclamationTriangleIcon /> },
-    { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
     { id: 'testimonials', label: 'Testimonials', icon: <ChatBubbleLeftRightIcon /> },
     { id: 'licenses', label: 'Licenses', icon: <ShieldIcon /> },
     { id: 'my-profile', label: 'My Public Profile', icon: <UserCircleIcon /> },
@@ -121,8 +116,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
   const getNotificationIcon = (type: NotificationType) => {
     const iconClass = "w-5 h-5 flex-shrink-0";
     switch (type) {
-      case NotificationType.NEW_MESSAGE:
-        return <MessageIcon className={`${iconClass} text-sky-500`} />;
       case NotificationType.LEAD_ASSIGNED:
         return <UsersIcon className={`${iconClass} text-emerald-500`} />;
       case NotificationType.TASK_DUE:

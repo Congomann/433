@@ -4,9 +4,8 @@ declare var gapi: any;
 declare var google: any;
 
 const CLIENT_ID = '118172916921-valbau851o2fm6vbmvsufgoqgqt3089j.apps.googleusercontent.com';
-const API_KEY = process.env.API_KEY;
 const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"];
-const SCOPES = "https://www.googleapis.com/auth/calendar.events.readonly";
+const SCOPES = "https://www.googleapis.com/auth/calendar.events";
 
 class GoogleCalendarService {
     private tokenClient: any = null;
@@ -22,8 +21,9 @@ class GoogleCalendarService {
 
             gapi.load('client', async () => {
                 try {
+                    // The API key is not required for OAuth 2.0 flows, and the Gemini key
+                    // is not valid for the Google Calendar API. Removing it resolves the error.
                     await gapi.client.init({
-                        apiKey: API_KEY,
                         discoveryDocs: DISCOVERY_DOCS,
                     });
                     
@@ -34,7 +34,7 @@ class GoogleCalendarService {
                     });
                     resolve();
                 } catch (error) {
-                    console.error("Error initializing GAPI client", error);
+                    console.error("Error initializing GAPI client", JSON.stringify(error, null, 2));
                     reject(error);
                 }
             });
@@ -105,6 +105,41 @@ class GoogleCalendarService {
         } catch (error) {
             console.error("Error fetching Google Calendar events:", error);
             throw new Error("Could not fetch events from Google Calendar.");
+        }
+    }
+
+    private getNextDay(dateString: string): string {
+        const [year, month, day] = dateString.split('-').map(Number);
+        const date = new Date(Date.UTC(year, month - 1, day));
+        date.setUTCDate(date.getUTCDate() + 1);
+        return date.toISOString().split('T')[0];
+    }
+
+    async createEvent(summary: string, description: string, date: string): Promise<any> {
+        if (!this.getIsSignedIn()) {
+            throw new Error("User is not signed in to Google Calendar.");
+        }
+        try {
+            const event = {
+                'summary': summary,
+                'description': description,
+                'start': {
+                    'date': date, // YYYY-MM-DD for all-day events
+                },
+                'end': {
+                    'date': this.getNextDay(date), // YYYY-MM-DD, end date is exclusive
+                },
+            };
+
+            const response = await gapi.client.calendar.events.insert({
+                'calendarId': 'primary',
+                'resource': event,
+            });
+            
+            return response.result;
+        } catch (error) {
+            console.error("Error creating Google Calendar event:", error);
+            throw new Error("Could not create event in Google Calendar.");
         }
     }
 }

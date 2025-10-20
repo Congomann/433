@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { User, Client, Task, Agent, Policy, UserRole, AISuggestion, EmailDraft, Interaction, PolicyStatus, PolicyType, PolicyUnderwritingStatus, AICallAnalysis, AICallLog } from '../types';
+import { User, Client, Task, Agent, Policy, UserRole, AISuggestion, EmailDraft, Interaction, PolicyStatus, PolicyType, PolicyUnderwritingStatus, AICallAnalysis, AICallLog, ClientStatus } from '../types';
 
 // FIX: Per @google/genai guidelines, the API key must be obtained directly from the environment variable.
 // Fallbacks and warnings are removed as the key is assumed to be configured.
@@ -94,21 +94,54 @@ const getRoleSpecificPrompt = (currentUser: User, allData: { clients: Client[], 
                  return { id: c.id, name: `${c.firstName} ${c.lastName}`, status: c.status, joinDate: c.joinDate, lastContact: lastInteraction?.date, policies: clientPolicyTypes };
             });
 
+            // Pre-process cross-sell opportunities to make the AI's job easier and more reliable.
+            const activeClients = agentClients.filter(c => c.status === ClientStatus.ACTIVE);
+            
+            const crossSellOpportunities = activeClients.map(client => {
+                const clientPolicies = allAgentPolicies.filter(p => p.clientId === client.id);
+                if (clientPolicies.length !== 1) {
+                    return null;
+                }
+                
+                const policy = clientPolicies[0];
+                const existingPolicyType = policy.type;
+                let suggestedPolicyType: PolicyType | null = null;
+                
+                // Determine complementary policy based on user's request
+                if (existingPolicyType === PolicyType.AUTO) {
+                    suggestedPolicyType = PolicyType.HOME;
+                } else if (existingPolicyType === PolicyType.HOME) {
+                    suggestedPolicyType = PolicyType.AUTO;
+                } else if (existingPolicyType.includes('Life')) {
+                    suggestedPolicyType = PolicyType.AUTO;
+                }
+
+                if (suggestedPolicyType) {
+                    return {
+                        clientId: client.id,
+                        clientName: `${client.firstName} ${client.lastName}`,
+                        existingPolicyType,
+                        suggestedPolicyType,
+                    };
+                }
+                
+                return null;
+            }).filter((opportunity): opportunity is { clientId: number; clientName: string; existingPolicyType: PolicyType; suggestedPolicyType: PolicyType } => opportunity !== null);
+
+
             roleInstructions = `
                 You are an AI assistant for an insurance agent named ${currentUser.name}. Your goal is to provide actionable suggestions to help them manage their clients and policies effectively. Today's date is ${today}.
                 1.  **Policy Renewals:** The 'expiringPolicies' list contains policies that need renewal attention. For each policy in this list, generate a 'CREATE_TASK' suggestion.
                     - The task's title should be: "Initiate renewal process for [Client Name]'s [Policy Type] policy". You must find the client's name from the 'clients' list using the 'clientId'.
                     - The task's priority must be 'High' if 'daysUntilExpiration' is 15 or less. Otherwise, set the priority to 'Medium'.
                 2.  **Client Follow-ups:** Identify active clients who have not been contacted in over 90 days. Suggest a "CREATE_TASK" to 'Check in with [Client Name]'.
-                3.  **Cross-sell Opportunities:** Using the 'policies' data, identify active clients who have exactly one policy. For these clients, generate a 'Low' priority suggestion with the "DRAFT_EMAIL" action.
-                    - The action's prompt should be: 'Draft an email to [Client Name] to discuss adding a [Complementary Policy Type] policy to their portfolio.'
-                    - To determine the [Complementary Policy Type]:
-                        - If the client's only policy is 'Auto Insurance', suggest 'Home Insurance'.
-                        - If the client's only policy is 'Home Insurance', suggest 'Auto Insurance'.
-                        - If the client's only policy contains the word 'Life', suggest 'Auto Insurance'.
+                3.  **Cross-sell Opportunities:** The 'crossSellOpportunities' list identifies clients with a single policy who are prime candidates for adding another. For each person in this list:
+                    - Generate a 'Low' priority suggestion with the "DRAFT_EMAIL" action.
+                    - The suggestion title should be: "Propose new policy to [Client Name]".
+                    - The action's prompt must be: 'Draft an email to [Client Name] about adding a [Suggested Policy Type] policy to complement their existing [Existing Policy Type] coverage.' Use the 'clientName', 'suggestedPolicyType', and 'existingPolicyType' fields from the data provided in the 'crossSellOpportunities' list.
                 4.  **Lead Nurturing:** Identify leads that have not been contacted in over 7 days. Suggest a "CREATE_TASK" to 'Follow up with lead [Lead Name]'.
             `;
-            dataPayload = { clients: clientSummaryForPrompt, policies, expiringPolicies };
+            dataPayload = { clients: clientSummaryForPrompt, expiringPolicies, crossSellOpportunities };
             break;
         }
         case UserRole.SUB_ADMIN:

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Task, Client } from '../types';
-import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon } from './icons';
+import { PlusIcon, PencilIcon, TrashIcon, CalendarIcon, ArrowsUpDownIcon } from './icons';
 import AddEditTaskModal from './AddEditTaskModal';
 
 interface TasksViewProps {
@@ -13,6 +13,8 @@ interface TasksViewProps {
 }
 
 type FilterStatus = 'all' | 'active' | 'completed';
+type SortByKey = 'dueDate' | 'title' | 'client';
+type SortOrder = 'asc' | 'desc';
 
 const FilterButton: React.FC<{buttonFilter: FilterStatus, label: string, count: number, activeFilter: FilterStatus, setFilter: (filter: FilterStatus) => void}> = ({ buttonFilter, label, count, activeFilter, setFilter }) => (
     <button
@@ -28,6 +30,8 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onTog
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [filter, setFilter] = useState<FilterStatus>('active');
+  const [sortBy, setSortBy] = useState<SortByKey>('dueDate');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   const clientMap = useMemo(() => {
     return clients.reduce((map, client) => {
@@ -36,26 +40,39 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onTog
     }, {} as Record<number, string>);
   }, [clients]);
 
-  const { activeTasks, completedTasks } = useMemo(() => {
-    const active: Task[] = [];
-    const completed: Task[] = [];
-    tasks.forEach(task => {
-        if (task.completed) {
-            completed.push(task);
-        } else {
-            active.push(task);
-        }
-    });
-    const sortByDueDate = (a: Task, b: Task) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    return { activeTasks: active.sort(sortByDueDate), completedTasks: completed.sort(sortByDueDate) };
-  }, [tasks]);
+  const sortedTasks = useMemo(() => {
+      const filtered = tasks.filter(task => {
+          if (filter === 'active') return !task.completed;
+          if (filter === 'completed') return task.completed;
+          return true;
+      });
 
-  const filteredTasks = useMemo(() => {
-      if (filter === 'active') return activeTasks;
-      if (filter === 'completed') return completedTasks;
-      return [...activeTasks, ...completedTasks];
-  }, [activeTasks, completedTasks, filter]);
+      return filtered.sort((a, b) => {
+          let compareA: string | number;
+          let compareB: string | number;
 
+          switch (sortBy) {
+              case 'dueDate':
+                  compareA = new Date(a.dueDate).getTime();
+                  compareB = new Date(b.dueDate).getTime();
+                  break;
+              case 'title':
+                  compareA = a.title.toLowerCase();
+                  compareB = b.title.toLowerCase();
+                  break;
+              case 'client':
+                  compareA = a.clientId ? clientMap[a.clientId]?.toLowerCase() || 'zzzz' : 'zzzz';
+                  compareB = b.clientId ? clientMap[b.clientId]?.toLowerCase() || 'zzzz' : 'zzzz';
+                  break;
+              default:
+                  return 0;
+          }
+          
+          if (compareA < compareB) return sortOrder === 'asc' ? -1 : 1;
+          if (compareA > compareB) return sortOrder === 'asc' ? 1 : -1;
+          return 0;
+      });
+  }, [tasks, filter, sortBy, sortOrder, clientMap]);
 
   const handleAddTaskClick = () => {
     setTaskToEdit(null);
@@ -113,10 +130,14 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onTog
 
     return (
         <div className={`p-4 rounded-2xl border shadow-premium flex items-center justify-between transition-all duration-300 group ${dueDateInfo.containerClasses}`}>
-            <div className="flex items-center cursor-pointer" onClick={() => onToggleTask(task.id)}>
-                <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200 ${task.completed ? 'bg-primary-600 border-primary-600' : 'border-slate-300 group-hover:border-primary-400'}`}>
-                    {task.completed && <svg className="w-4 h-4 text-white animate-scale-in" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                </div>
+            <div className="flex items-center">
+                 <input
+                    type="checkbox"
+                    checked={task.completed}
+                    onChange={() => onToggleTask(task.id)}
+                    className="h-5 w-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                    onClick={(e) => e.stopPropagation()}
+                />
                 <div className="ml-4">
                     <p className={`relative font-semibold text-slate-800 transition-all ${task.completed ? 'text-slate-500' : ''}`}>
                       {task.title}
@@ -160,14 +181,28 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onTog
         </button>
       </div>
       
-      <div className="mb-6 flex space-x-2">
-        <FilterButton buttonFilter="active" label="Active" count={activeTasks.length} activeFilter={filter} setFilter={setFilter} />
-        <FilterButton buttonFilter="completed" label="Completed" count={completedTasks.length} activeFilter={filter} setFilter={setFilter} />
-        <FilterButton buttonFilter="all" label="All" count={tasks.length} activeFilter={filter} setFilter={setFilter} />
+      <div className="mb-6 flex flex-col sm:flex-row items-center gap-4">
+        <div className="flex space-x-2">
+            <FilterButton buttonFilter="active" label="Active" count={tasks.filter(t => !t.completed).length} activeFilter={filter} setFilter={setFilter} />
+            <FilterButton buttonFilter="completed" label="Completed" count={tasks.filter(t => t.completed).length} activeFilter={filter} setFilter={setFilter} />
+            <FilterButton buttonFilter="all" label="All" count={tasks.length} activeFilter={filter} setFilter={setFilter} />
+        </div>
+        <div className="flex items-center space-x-2 sm:ml-auto">
+            <label htmlFor="sort-by" className="text-sm font-medium text-slate-600">Sort by:</label>
+            <select id="sort-by" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortByKey)} className="px-3 py-1.5 border border-slate-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <option value="dueDate">Due Date</option>
+                <option value="title">Title</option>
+                <option value="client">Client Name</option>
+            </select>
+            <button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-2 border border-slate-300 rounded-lg bg-white hover:bg-slate-100" aria-label={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}>
+                <ArrowsUpDownIcon className={`w-4 h-4 text-slate-600 transition-transform duration-200 ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />
+            </button>
+        </div>
       </div>
 
+
       <div className="space-y-4">
-          {filteredTasks.length > 0 ? filteredTasks.map(task => (
+          {sortedTasks.length > 0 ? sortedTasks.map(task => (
             <TaskItem key={task.id} task={task} />
           )) : (
             <div className="text-center py-16 bg-white/50 rounded-2xl border border-dashed border-slate-300">

@@ -1,6 +1,6 @@
 import { handleRequest } from '../server/api';
 import { getToken } from './authService';
-import { User, UserRole, AgentStatus, Message } from '../types';
+import { User, UserRole, AgentStatus } from '../types';
 
 const getAuthHeaders = () => {
     const authToken = getToken();

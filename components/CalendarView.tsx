@@ -3,6 +3,7 @@ import { CalendarEvent, User, Agent, CalendarNote, DayOff, UserRole } from '../t
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, ClockIcon, LocationPinIcon, GoogleIcon } from './icons';
 import { useToast } from '../contexts/ToastContext';
 import { googleCalendarService } from '../services/googleCalendarService';
+import CalendarNoteModal from './CalendarNoteModal';
 
 interface CalendarViewProps {
   currentUser: User;
@@ -11,20 +12,25 @@ interface CalendarViewProps {
   calendarNotes: CalendarNote[];
   users: User[];
   daysOff: DayOff[];
-  onOpenNoteModal: (date: Date) => void;
   onToggleDayOff: (date: string) => void;
   onAddDaysOffBatch: (dates: string[]) => void;
   onDeleteDaysOffBatch: (dates: string[]) => void;
+  isGoogleConnected: boolean;
+  isGoogleClientInitializing: boolean;
+  onGoogleConnectionChange: (isConnected: boolean) => void;
+  onSaveCalendarNote: (noteData: Omit<CalendarNote, 'id'> & { id?: number; }) => Promise<any>;
+  onDeleteCalendarNote: (noteId: number) => Promise<any>;
 }
 
-const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calendarEvents, calendarNotes, users, daysOff, onOpenNoteModal, onToggleDayOff, onAddDaysOffBatch, onDeleteDaysOffBatch }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calendarEvents, calendarNotes, users, daysOff, onToggleDayOff, onAddDaysOffBatch, onDeleteDaysOffBatch, isGoogleConnected, isGoogleClientInitializing, onGoogleConnectionChange, onSaveCalendarNote, onDeleteCalendarNote }) => {
   const [currentDate, setCurrentDate] = useState(new Date('2025-10-01T12:00:00Z'));
   const [selectedDate, setSelectedDate] = useState(new Date('2025-10-16T12:00:00Z'));
   const { addToast } = useToast();
   
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [selectedDateForNote, setSelectedDateForNote] = useState<Date | null>(null);
+
   // Google Calendar Integration State
-  const [isGoogleClientInitializing, setIsGoogleClientInitializing] = useState(true);
-  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [googleEvents, setGoogleEvents] = useState<CalendarEvent[]>([]);
 
@@ -33,27 +39,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Initialize Google API Client
-  useEffect(() => {
-    const checkGapi = () => {
-        if ((window as any).gapi && (window as any).google) {
-            googleCalendarService.init()
-                .then(() => {
-                    setIsGoogleConnected(googleCalendarService.getIsSignedIn());
-                })
-                .catch(err => {
-                    console.error("Google Calendar init failed", err);
-                    addToast('Error', 'Could not initialize Google Calendar integration.', 'error');
-                })
-                .finally(() => {
-                    setIsGoogleClientInitializing(false);
-                });
-        } else {
-            setTimeout(checkGapi, 100); // Check again shortly
-        }
-    };
-    checkGapi();
-  }, [addToast]);
+  const handleOpenNoteModal = (date: Date) => {
+    setSelectedDateForNote(date);
+    setIsNoteModalOpen(true);
+  };
   
   // Fetch Google events on initial load if connected
   useEffect(() => {
@@ -70,13 +59,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
     setIsSyncing(true);
     try {
         await googleCalendarService.signIn();
-        setIsGoogleConnected(true);
-        const events = await googleCalendarService.listEvents();
-        setGoogleEvents(events);
-        addToast('Success', 'Google Calendar connected and events synced.', 'success');
+        onGoogleConnectionChange(true);
+        addToast('Success', 'Google Calendar connected. Syncing events...', 'success');
     } catch (error) {
         console.error("Google connect error", error);
         addToast('Connection Failed', 'Could not connect to Google Calendar.', 'error');
+        onGoogleConnectionChange(false);
     } finally {
         setIsSyncing(false);
     }
@@ -84,7 +72,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
 
   const handleGoogleDisconnect = async () => {
       googleCalendarService.signOut();
-      setIsGoogleConnected(false);
+      onGoogleConnectionChange(false);
       setGoogleEvents([]);
       addToast('Disconnected', 'Google Calendar has been disconnected.', 'info');
   };
@@ -267,6 +255,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
 
 
   return (
+    <>
     <div className="p-6 sm:p-10 h-full flex flex-col page-enter">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
         <div>
@@ -282,7 +271,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
                 <GoogleIcon className="w-5 h-5 mr-2" />
                 {isGoogleClientInitializing ? 'Initializing...' : isSyncing ? 'Syncing...' : isGoogleConnected ? 'Disconnect Calendar' : 'Connect Calendar'}
             </button>
-            <button onClick={() => selectedDate && onOpenNoteModal(selectedDate)} className="flex items-center justify-center bg-primary-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 button-press">
+            <button onClick={() => selectedDate && handleOpenNoteModal(selectedDate)} className="flex items-center justify-center bg-primary-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 button-press">
                 <PlusIcon className="w-5 h-5 mr-2" /> New Note
             </button>
         </div>
@@ -381,7 +370,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
             {canMarkDayOff && selectedDate && (
                 <div className="mt-auto pt-4 flex flex-col gap-2 border-t border-slate-200/50 flex-shrink-0">
                      <button
-                        onClick={() => selectedDate && onOpenNoteModal(selectedDate)}
+                        onClick={() => selectedDate && handleOpenNoteModal(selectedDate)}
                         className="w-full text-center font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors bg-slate-100 text-slate-700 hover:bg-slate-200"
                     >
                         View/Add Notes for Selected Day
@@ -397,6 +386,20 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, agents, calend
         </div>
       </div>
     </div>
+    {selectedDateForNote && (
+        <CalendarNoteModal
+            isOpen={isNoteModalOpen}
+            onClose={() => setIsNoteModalOpen(false)}
+            onSave={onSaveCalendarNote}
+            onDelete={onDeleteCalendarNote}
+            selectedDate={selectedDateForNote}
+            notesForDay={calendarNotes.filter(n => n.date === selectedDateForNote.toISOString().split('T')[0])}
+            currentUser={currentUser}
+            users={users}
+            isGoogleConnected={isGoogleConnected}
+        />
+    )}
+    </>
   );
 };
 
